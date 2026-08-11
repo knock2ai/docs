@@ -1,0 +1,186 @@
+---
+title: "Receive Real-Time Visitor Event Alerts via Webhooks"
+sidebarTitle: "Webhooks"
+description: "Subscribe to Knock2 webhook events to get instant HTTP notifications when accounts are identified, contacts appear, scores change, or plays trigger."
+---
+
+Webhooks let your backend systems react to Knock2 events the moment they happen — no polling required. When a company is identified on your site, a lead score changes, or a play fires, Knock2 sends an HTTP `POST` request to the URL you register, carrying a signed JSON payload with everything you need to update your CRM, trigger a sales alert, or kick off an automation.
+
+## Supported Events
+
+| Event | When it fires |
+| --- | --- |
+| `account.identified` | A company was identified from a site visit (new or returning) |
+| `contact.identified` | An individual person was identified on the site |
+| `score.changed` | A lead score was updated for an account or contact |
+| `play.triggered` | A play fired for a contact or account |
+| `workflow.triggered` | Deprecated alias for `play.triggered` — kept for existing subscriptions, do not use for new ones |
+| `signal.detected` | A new buyer signal event was detected for a watched account or contact |
+| `tenant.limit_reached` | A child tenant's credit/contact/account allocation (see [tenant limits](/api-reference/tenants/put-tenant-limits)) was exhausted — dispatched only to subscriptions registered under the **parent's** key, since the allocation is the parent's lever. Register the subscription on your own (parent) key, not the child's — a child's own subscription will never receive this event about itself. |
+
+## Create a Webhook
+
+Register a new webhook endpoint by `POST`ing to `/v1/webhooks` with your destination URL and the list of events you want to subscribe to.
+
+```bash
+curl -X POST https://api.knock2.ai/v1/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-app.example.com/webhooks/knock2",
+    "events": ["account.identified", "score.changed"],
+    "name": "CRM sync webhook"
+  }'
+```
+
+```json
+{
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "url": "https://your-app.example.com/webhooks/knock2",
+    "events": ["account.identified", "score.changed"],
+    "name": "CRM sync webhook",
+    "secret_prefix": "whsec_abc1234567"
+  }
+}
+```
+
+<Note>
+  `secret_prefix` is a preview only — it shows a truncated portion of your signing secret, not the full value. Retrieve the full signing key with the endpoint below.
+</Note>
+
+Creating and deleting webhook subscriptions requires the `webhooks:write` scope; listing them and fetching the signing key requires `webhooks:read`.
+
+## Payload Structure
+
+Every webhook delivery `POST`s a JSON body to your endpoint. Here is a full example for the `account.identified` event:
+
+```json
+{
+  "event": "account.identified",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Acme Corp",
+    "domain": "acme.com",
+    "industry": "Software",
+    "latest_visit_page": "/pricing",
+    "latest_visit_datetime": "2024-06-01T14:23:00Z"
+  }
+}
+```
+
+The top-level `event` field tells you which event type fired. The `data` object contains the full record — its shape varies by event type but always includes an `id` you can use to fetch the complete resource from the REST API.
+
+## Verifying Signatures
+
+Knock2 signs every webhook payload with HMAC-SHA256 and delivers the signature in the `X-Knock-Signature` request header. Always verify the signature before processing the payload to ensure the request genuinely came from Knock2.
+
+Verification is a standard HMAC-SHA256 check over the **raw request body bytes** (not a parsed/re-serialized object):
+
+<CodeGroup>
+
+```javascript Node.js
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, secret) {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expected)
+  );
+}
+```
+
+```python Python
+import hmac, hashlib
+
+def verify_webhook(payload: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(signature, expected)
+```
+
+</CodeGroup>
+
+### Getting Your Signing Key
+
+The `secret` you pass to the snippets above is retrieved with `GET /v1/webhooks/{webhook_id}/secret` (requires the `webhooks:read` scope):
+
+```bash
+curl https://api.knock2.ai/v1/webhooks/550e8400-e29b-41d4-a716-446655440000/secret \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```json
+{
+  "data": {
+    "signing_key": "3b1e...f9"
+  }
+}
+```
+
+<Note>
+  Unlike your API key, the signing key is never stored — it's re-derived from the subscription ID on every request, so you can fetch it again at any time. There's no "shown only once" restriction, and nothing is invalidated by requesting it more than once.
+</Note>
+
+## List Webhooks
+
+Retrieve all registered webhook subscriptions for your account:
+
+```bash
+curl https://api.knock2.ai/v1/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "url": "https://your-app.example.com/webhooks/knock2",
+      "events": ["account.identified", "score.changed"],
+      "name": "CRM sync webhook",
+      "secret_prefix": "whsec_abc1234567",
+      "is_active": true,
+      "created_at": "2024-06-01T14:23:00Z",
+      "last_success_at": null,
+      "last_failure_at": null
+    }
+  ]
+}
+```
+
+<Note>
+  This endpoint is not paginated — `GET /v1/webhooks` returns all active subscriptions for your tenant in a single response, without `has_more`/`next_cursor`.
+</Note>
+
+## Delete a Webhook
+
+Remove a webhook subscription by sending a `DELETE` request with the webhook ID:
+
+```bash
+curl -X DELETE https://api.knock2.ai/v1/webhooks/<webhook_id> \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+A successful deletion returns `204 No Content` with an empty body. Knock2 stops delivering events to that URL immediately.
+
+<Note>
+  Webhook endpoint URLs must use **HTTPS**. Plain HTTP URLs are rejected at registration time to ensure your payload data is encrypted in transit. If you're testing locally, use a tunneling tool such as ngrok to simulate deliveries safely.
+</Note>
+
+## Parent/Child Fan-in
+
+A subscription you create with your own (parent) API key automatically covers events fired for every one of your child tenants too — you don't need to register a separate subscription per child, and tenants created after the subscription already exists are covered from the moment they're created. Every delivery includes a `product_slug` field so you can tell which tenant an event actually came from.
+
+If a child tenant also has its own subscription for the same event type, **both** fire — duplicate delivery across a parent-level and child-level subscription is the accepted default, since deliveries are already dedupable by `X-Knock-Delivery-Id`.
+
+## Delivery and Retries
+
+Deliveries are **at-least-once** — design your handler to be idempotent (dedupe on the event payload's `id`). If your endpoint doesn't respond successfully, Knock2 retries with the following backoff schedule: 1 minute, 5 minutes, 30 minutes, then 2 hours after the initial attempt. After the 5th attempt fails, the delivery is marked dead-lettered and no further retries occur.

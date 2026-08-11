@@ -1,0 +1,54 @@
+---
+title: "Knock2: Visitor Identification and Lead Intelligence"
+sidebarTitle: "Introduction"
+description: "Identify anonymous website visitors, score them against your ICP, and get real-time lead intelligence via the Knock2 REST API and webhooks."
+---
+
+Knock2 turns anonymous website traffic into actionable sales intelligence. By combining a lightweight tracking script with a powerful enrichment engine, Knock2 identifies the companies and contacts visiting your site, scores each visitor against your ideal customer profile (ICP), and surfaces the results in real time — all through a clean REST API and configurable webhook alerts. Whether you're a solo founder looking for your next customer or a revenue team managing thousands of accounts, Knock2 gives you the context you need to act fast on high-intent signals.
+
+## Key capabilities
+
+<CardGroup cols={2}>
+  <Card title="Visitor Identification" icon="magnifying-glass">
+    Resolve anonymous IP traffic to named companies and individual contacts using Knock2's global identity graph. No form fills required.
+  </Card>
+  <Card title="Lead Scoring" icon="star">
+    Every identified visitor is automatically scored against your ICP criteria — firmographic fit, page intent, and visit frequency — so your team always knows who to call first.
+  </Card>
+  <Card title="Contact Enrichment" icon="address-card">
+    Go beyond company-level identification. Knock2 enriches visitor records with job title, LinkedIn profile, email, and phone data so you can reach the right person directly.
+  </Card>
+  <Card title="Webhooks" icon="webhook">
+    Receive instant HTTP push notifications whenever a high-scoring visitor lands on your site. Pipe alerts straight into Slack, your CRM, or any downstream system.
+  </Card>
+  <Card title="Filter Sets" icon="filter">
+    Define reusable filter rules — by industry, employee count, intent page, ICP score, and more — to segment your visitor stream and focus on the accounts that matter most.
+  </Card>
+  <Card title="Multi-Tenant" icon="building">
+    If you're building on top of Knock2 as a platform, the multi-tenant API lets you provision and manage isolated sub-tenants, each with their own tracking, data, and API keys.
+  </Card>
+</CardGroup>
+
+## How it works
+
+Knock2 operates as a four-stage pipeline that runs automatically once you embed the tracking script on your site.
+
+1. **Tracking script fires** — A single `<script>` tag on your site sends an anonymous session event to Knock2 every time a visitor loads a page.
+2. **Visitor is identified** — Knock2 resolves the visitor's IP and session signals against its enrichment database, linking the session to a known company and, where possible, a named contact.
+3. **Data is available via API** — The identified account and contact records appear immediately in the REST API under `/v1/accounts` and `/v1/contacts`, enriched with firmographics, ICP score, and visit history.
+4. **Webhook alerts fire** — If the visitor matches a configured filter set, Knock2 fires a webhook to your endpoint in real time, carrying the full account and contact payload.
+
+<Note>
+  Identification accuracy improves over time as Knock2 correlates repeat visit patterns. Most customers see meaningful identification rates within the first 24–48 hours of going live.
+</Note>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the tracking script and make your first API call in under five minutes.
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Learn how to get your API key, pass it in requests, and handle authentication errors.
+  </Card>
+</CardGroup>

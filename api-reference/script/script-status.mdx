@@ -1,0 +1,87 @@
+---
+title: "GET /v1/script/status — Check Script Installation Status"
+sidebarTitle: "Script Status"
+description: "GET /v1/script/status checks whether the Knock2 tracking script has fired on your site in the last 7 days and returns visitor count and last visit."
+---
+
+`GET /v1/script/status` tells you whether the Knock2 tracking script is successfully installed and receiving real traffic. Use it to confirm a new installation is working, power an in-app setup checklist, or alert your team if the script goes silent. Knock2 considers a script "installed" when at least one unique non-localhost visitor IP has been recorded in the last 7 days.
+
+<Note>
+  You can call this with the **per-tenant API key** returned by `POST /v1/tenants`, or with your **parent** API key plus `X-Knock-Tenant` (or `?product_slug=`) to check a direct child's status without switching keys — see [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</Note>
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/script/status
+```
+
+## Request Parameters
+
+<ParamField query="product_slug" type="string">
+  Read a direct child tenant's status instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied.
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`.
+</ParamField>
+
+## Example Requests
+
+<CodeGroup>
+
+```bash Using the tenant's own key
+curl https://api.knock2.ai/v1/script/status \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash Using a parent key for a child tenant
+curl https://api.knock2.ai/v1/script/status \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "X-Knock-Tenant: acme_com_yourco_com"
+```
+
+</CodeGroup>
+
+## Response
+
+A successful request returns `200 OK` with a `ScriptStatusResponse` body.
+
+```json
+{
+  "data": {
+    "is_installed": true,
+    "visitor_count_last_7_days": 142,
+    "last_visit_at": "2024-06-01T14:23:00Z"
+  }
+}
+```
+
+<ResponseField name="data.is_installed" type="boolean">
+  `true` when at least one unique non-localhost visitor IP has been recorded in the last 7 days, indicating the script is live and receiving traffic. `false` if no qualifying visits have been seen in that window.
+</ResponseField>
+
+<ResponseField name="data.visitor_count_last_7_days" type="integer">
+  The raw count of unique visitor IPs recorded in the last 7 days. This count includes all unique sessions regardless of whether the visitor was successfully identified.
+</ResponseField>
+
+<ResponseField name="data.last_visit_at" type="string | null">
+  ISO 8601 timestamp of the most recent visit recorded by the tracking script. Returns `null` if no visits have been recorded yet.
+</ResponseField>
+
+## Troubleshooting
+
+If `is_installed` is `false` after you have added the script tag to your site:
+
+- Confirm the `<script>` tag appears in the rendered HTML of a live page (not just in your source editor).
+- Check that the script's `src` URL matches the `/install/{your_tenant}/prod` path returned by `GET /v1/script` for this key.
+- Wait a few minutes after the first page load — there may be a short propagation delay.
+- Ensure the page has been visited from a non-localhost IP address. Local development traffic is excluded.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `422` | Request could not be processed — verify your request is well-formed. |
+| `429` | Rate limit exceeded. Slow down your request rate and retry. |

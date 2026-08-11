@@ -1,0 +1,104 @@
+---
+title: "PATCH /v1/tenants/{product_slug}/scoring-config — Update a Tenant's Lead-Scoring Configuration"
+sidebarTitle: "Update Scoring Config"
+description: "PATCH /v1/tenants/{product_slug}/scoring-config sets a direct child tenant's Company Profile and Buyer Persona — previously dashboard-only. Requires tenants:write."
+---
+
+`PATCH /v1/tenants/{product_slug}/scoring-config` sets the Company Profile and Buyer Persona that drive lead scoring for your own tenant or a direct child tenant. Before this endpoint, these fields could only be set by hand in the dashboard, which meant a programmatically provisioned tenant scored every visitor against an empty ICP until someone logged in and filled it out. Call this right after [Create Tenant](/api-reference/tenants/create-tenant) — or pass the same fields as `scoring_config` on the create call itself — to make onboarding fully hands-off.
+
+Only fields you supply are changed. Omitted fields keep their current value — this is a partial update, not a full replace.
+
+## Endpoint
+
+```text
+PATCH https://api.knock2.ai/v1/tenants/{product_slug}/scoring-config
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  Your own tenant's slug, or a direct child tenant's slug.
+</ParamField>
+
+## Request Body
+
+All fields are optional. Send only the fields you want to change.
+
+<ParamField body="name" type="string">
+  A new display name for the tenant (Company Profile).
+</ParamField>
+
+<ParamField body="category" type="string">
+  A short category or industry label for the tenant's own business (Company Profile).
+</ParamField>
+
+<ParamField body="overview" type="string">
+  A plain-English description of the tenant's product or business (Company Profile). Also used to tune visitor identification accuracy.
+</ParamField>
+
+<ParamField body="linkedin_company_url" type="string">
+  URL to the tenant's own LinkedIn company page (Company Profile).
+</ParamField>
+
+<ParamField body="persona_description" type="string">
+  A plain-English description of the tenant's ideal buyer persona — title, seniority, department (e.g. `"VP or Director of Engineering at a Series B+ SaaS company"`).
+</ParamField>
+
+<ParamField body="company_description" type="string">
+  A plain-English description of the tenant's ideal customer company — industry, size, market (e.g. `"B2B SaaS companies selling to mid-market and enterprise buyers"`).
+</ParamField>
+
+<ParamField body="persona_weight" type="number">
+  A value between `0` and `1` controlling how heavily Buyer Persona fit is weighted against company fit when scoring. Defaults to `0.5` the first time any persona field is set for a tenant with no prior ICP.
+</ParamField>
+
+<Note>
+  Supplying any of `persona_description`, `company_description`, or `persona_weight` creates an Ideal Customer Profile (ICP) for this tenant if one doesn't already exist. `name`, `category`, `overview`, and `linkedin_company_url` write directly to the tenant's Company Profile and take effect independently — you can update either group, or both, in the same request.
+</Note>
+
+## Example Request
+
+```bash
+curl -X PATCH https://api.knock2.ai/v1/tenants/acme_com_yourco_com/scoring-config \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "overview": "Acme Corp builds enterprise workflow automation tools.",
+    "persona_description": "VP or Director of Engineering at a Series B+ SaaS company with 50-500 employees.",
+    "company_description": "B2B SaaS companies selling to mid-market and enterprise buyers.",
+    "persona_weight": 0.6
+  }'
+```
+
+## Response
+
+Returns the tenant's full scoring configuration after the update, same shape as [Get Scoring Config](/api-reference/tenants/get-scoring-config):
+
+```json
+{
+  "data": {
+    "product_slug": "acme_com_yourco_com",
+    "name": "Acme Corp",
+    "category": null,
+    "overview": "Acme Corp builds enterprise workflow automation tools.",
+    "linkedin_company_url": null,
+    "persona_description": "VP or Director of Engineering at a Series B+ SaaS company with 50-500 employees.",
+    "company_description": "B2B SaaS companies selling to mid-market and enterprise buyers.",
+    "persona_weight": 0.6
+  }
+}
+```
+
+## Required Scope
+
+Requires `tenants:write`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:write` scope. |
+| `404` | No tenant found with this `product_slug` as your own account or a direct child of it. |
+| `422` | Request body failed schema validation (e.g. `persona_weight` outside `0`–`1`). |
+| `429` | Rate limit exceeded. |

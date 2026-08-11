@@ -1,0 +1,78 @@
+---
+title: "PUT /v1/tenants/{product_slug}/limits — Replace a Tenant's Credit Allocations"
+sidebarTitle: "Replace Tenant Limits"
+description: "PUT /v1/tenants/{product_slug}/limits replaces a tenant's entire allocation set. Idempotent — no partial-state ambiguity. Requires tenants:write."
+---
+
+`PUT /v1/tenants/{product_slug}/limits` replaces a direct child tenant's **entire** allocation set in one call — idempotent, with no partial-state ambiguity. Only a key whose `product_slug` is this tenant's `parent_product_slug` may call this.
+
+## Endpoint
+
+```text
+PUT https://api.knock2.ai/v1/tenants/{product_slug}/limits
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  A direct child tenant's slug.
+</ParamField>
+
+## Request Body
+
+<ParamField body="limits" type="array" required>
+  The full list of allocations to set — this replaces whatever was there before, it does not merge. Pass an empty array to clear all allocations (equivalent to `DELETE /v1/tenants/{product_slug}/limits`). Each entry:
+
+  - `type` (string, required) — `credits`, `contacts`, or `accounts`
+  - `value` (number, required) — in natural units for `type`
+  - `period` (string, required) — `billing_period`, `month`, `week`, `day`, or `lifetime`
+  - `is_enforced` (boolean, default `true`) — set `false` to track usage against the cap without blocking the tenant
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X PUT https://api.knock2.ai/v1/tenants/acme_com_yourco_com/limits \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "limits": [
+      {"type": "credits", "value": 100, "period": "lifetime"},
+      {"type": "contacts", "value": 10, "period": "week"}
+    ]
+  }'
+```
+
+## Response
+
+Returns the newly-set allocations with usage, same shape as [Get Tenant Limits](/api-reference/tenants/get-tenant-limits):
+
+```json
+{
+  "data": [
+    {"type": "credits", "value": 100, "period": "lifetime", "is_enforced": true, "equivalent_credits": 100, "used": 4, "remaining": 96},
+    {"type": "contacts", "value": 10, "period": "week", "is_enforced": true, "equivalent_credits": 10, "used": 0, "remaining": 10}
+  ]
+}
+```
+
+## Behavior notes
+
+- Lowering a limit below current usage takes effect immediately — the tenant is blocked on its next check (bounded by the block-status cache TTL, a few minutes).
+- Over-allocating across children is allowed by design — Knock2 does not enforce that the sum of every child's allocation stays under your own plan's credit limit. Use [`GET /v1/tenants`](/api-reference/tenants/list-tenants)'s `allocated_total_credits`/`plan_credits` to monitor the ratio yourself.
+- Values must always be in natural units — never store a credits-denominated number under `type: "contacts"` or `"accounts"`; the API converts to credits internally for the `equivalent_credits` field.
+- Subscribe to the `tenant.limit_reached` webhook event to be notified when a child exhausts an allocation (see the [Webhooks guide](/guides/webhooks)).
+
+## Required Scope
+
+Requires `tenants:write`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `400` | An entry in `limits` had an invalid `type`, `period`, or `value`, or the tenant is self-billed (`billing_mode: "self"`) — a parent allocation is meaningless for a tenant that pays its own bill. |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:write` scope. |
+| `404` | No tenant found with this `product_slug` as a direct child of your account. |
+| `429` | Rate limit exceeded. |

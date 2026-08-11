@@ -1,0 +1,84 @@
+---
+title: "Multi-Tenant Architecture Overview for Knock2 Users"
+sidebarTitle: "Overview"
+description: "Knock2's multi-tenant model lets agencies, resellers, and platform builders provision isolated workspaces for each of their customers via API."
+---
+
+Knock2's multi-tenant system lets you provision isolated Knock2 workspaces — called **tenants** — for each of your customers or sub-products. Each tenant gets its own tracking script, API key, and visitor data, completely separate from every other tenant you manage. Whether you're an agency running campaigns for dozens of clients or a SaaS platform embedding visitor identification into your own product, multi-tenant architecture gives you the programmatic control to spin up, configure, and deactivate workspaces at scale without manual intervention.
+
+## Who should use multi-tenant?
+
+<CardGroup cols={2}>
+  <Card title="Agencies" icon="building">
+    Managing Knock2 on behalf of multiple clients. Provision a dedicated, isolated workspace for each client so their data never mingles.
+  </Card>
+
+  <Card title="SaaS Platforms" icon="layer-group">
+    Embedding visitor identification directly into your own product. Each of your customers gets their own Knock2 workspace under the hood.
+  </Card>
+
+  <Card title="Resellers" icon="store">
+    Distributing Knock2 under your own brand. Use the API to create and manage workspaces without your clients ever interacting with Knock2 directly.
+  </Card>
+
+  <Card title="Multi-Product Developers" icon="code">
+    Building stacks that span multiple products or domains. Keep visitor data scoped to the right product with separate tenants per project.
+  </Card>
+</CardGroup>
+
+## Key concepts
+
+Understanding three core concepts will help you design your multi-tenant integration correctly before you write a single line of code.
+
+| Concept | Description |
+| --- | --- |
+| **Parent tenant** | The account that provisions sub-tenants. Authenticates with a master API key that carries `tenants:write` (management) and/or `tenants:read` (visibility) scopes. |
+| **Child tenant** | An isolated workspace created by the parent. Has its own API key, tracking script, and visitor dataset. |
+| **`product_slug`** | The unique identifier for each child tenant, **derived server-side** from its `domain` and namespaced under the parent's own slug (e.g. `acme.com` provisioned by `yourco_com` becomes `acme_com_yourco_com`). You never choose it. |
+
+### Parent tenant
+
+Your parent tenant is the top-level Knock2 account. It acts as the provisioning authority — every child tenant you create is owned by and associated with your parent. You authenticate all tenant management operations using your **master API key**: creating, updating, deactivating, and reactivating tenants require the `tenants:write` scope; listing tenants and reading their allocations/usage require `tenants:read`.
+
+### Child tenant (`product_slug`)
+
+Each child tenant is a fully self-contained Knock2 workspace. Once created, a child tenant operates independently: its tracking script is installed on the target domain, its API key authenticates its own data queries, and its visitor records are stored in isolation. Child tenants cannot access or affect one another's data — except that a parent key can deliberately read one child's data at a time via the [`X-Knock-Tenant` header](/tenants/managing-tenants#reading-a-child-tenants-data), and a parent-level webhook subscription automatically also receives events from every child (see the [Webhooks guide](/guides/webhooks#parent-child-fan-in)).
+
+### `product_slug`
+
+The `product_slug` is derived automatically, not assigned by you: Knock2 cleans the `domain` you provide and namespaces it under your own account's slug. This guarantees a child's slug can never collide with a future direct signup for that same domain under a different account, and makes provisioning idempotent per domain per parent — retrying `POST /v1/tenants` for the same domain always resolves to the same slug rather than creating a duplicate.
+
+<Tip>
+  Because the slug is derived from `domain`, the way to keep it predictable is to keep the `domain` you pass predictable — there's nothing else to configure.
+</Tip>
+
+## Tenant isolation
+
+Every child tenant you provision is completely isolated from every other tenant. The table below summarises what each child tenant owns exclusively.
+
+| Resource | Isolated per tenant |
+| --- | --- |
+| Tracking script URL | ✅ Unique path (`/install/{product_slug}`) scoped to the tenant |
+| Visitor data | ✅ Stored separately — no cross-tenant data access by default (a parent key can opt into reading one child at a time; see [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data)) |
+| API key | ✅ Returned once at creation; cannot be retrieved again |
+| Deactivation / reactivation authority | ✅ Only the provisioning parent can deactivate or reactivate |
+
+<Warning>
+  The child tenant's API key is shown **once** in the creation response. You must store it immediately in your own secure storage. Knock2 does not expose it again after the initial response.
+</Warning>
+
+## Required scope
+
+Tenant _management_ endpoints (create, update, deactivate, reactivate, set limits) require your parent API key to carry the **`tenants:write`** scope. Tenant _visibility_ endpoints (list, get, read limits, read usage) require **`tenants:read`** instead. If your key lacks the required scope, the API returns `403 Forbidden`. Check your account settings to confirm the scope is enabled on your master key before proceeding.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Managing Tenants" icon="sliders" href="/tenants/managing-tenants">
+    Step-by-step guide to creating, configuring, and deactivating sub-tenants via the API, including script installation.
+  </Card>
+
+  <Card title="API Reference: Create Tenant" icon="terminal" href="/api-reference/tenants/create-tenant">
+    Full request/response schema for the `POST /v1/tenants` endpoint.
+  </Card>
+</CardGroup>

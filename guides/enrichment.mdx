@@ -1,0 +1,98 @@
+---
+title: "Enrich Contact Profiles by Email Address with Knock2"
+sidebarTitle: "Enrichment"
+description: "Use the Knock2 enrichment API to look up a contact's full professional profile from an email address, merging data from multiple enrichment sources."
+---
+
+The enrichment API lets you pass an email address — and optionally a LinkedIn URL — and get back a rich contact profile pulled from Knock2's enrichment waterfall. Instead of integrating separately with multiple data providers, you make a single API call and Knock2 fans out the lookup across its vendor network, merges the results, and returns the most complete profile available. This is useful for enriching inbound form fills, imported lists, or any contact you identify through the tracking script.
+
+## How Enrichment Works
+
+When you submit an email address, Knock2 routes the request through its enrichment waterfall — an ordered sequence of data vendors. Each vendor is queried in turn until sufficient profile data is found. The results from all responding vendors are merged into a single, deduplicated contact profile.
+
+<Tip>
+  Each successful enrichment call deducts **1 credit** from your account balance, regardless of how many vendors respond internally. You are only charged when the final `status` is `full_match` or `partial_match`.
+</Tip>
+
+## Make an Enrichment Call
+
+Send a `POST` request to `/v1/enrich` with the contact's email address in the request body.
+
+```bash
+curl -X POST https://api.knock2.ai/v1/enrich \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "jane.smith@acme.com"}'
+```
+
+To improve match rates, optionally include a `linkedin_url` alongside the email:
+
+```json
+{
+  "email": "jane.smith@acme.com",
+  "linkedin_url": "https://linkedin.com/in/janesmith"
+}
+```
+
+Providing the LinkedIn URL gives the enrichment waterfall an additional signal to resolve the correct profile when multiple people share a name or email domain.
+
+## Response
+
+A successful enrichment returns a `status` of `full_match` or `partial_match` along with the merged contact profile:
+
+```json
+{
+  "status": "full_match",
+  "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+  "data": {
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "title": "VP of Engineering",
+    "email": "jane.smith@acme.com",
+    "linkedin_url": "https://linkedin.com/in/janesmith",
+    "company_name": "Acme Corp",
+    "company_domain": "acme.com",
+    "company_industry": "Software",
+    "company_estimated_employee_count": "51-200",
+    "seniority": "vp",
+    "departments": ["engineering"]
+  }
+}
+```
+
+Fields that no vendor could supply are omitted from the `data` object rather than returned as `null`, so you can safely check for key presence when mapping values to your downstream system.
+
+## Contact Record Created
+
+Every successful enrichment automatically creates or updates a contact record in Knock2. The `contact_id` in the response is the stable identifier for that contact. You can retrieve the full contact at any time using:
+
+```bash
+curl https://api.knock2.ai/v1/contacts/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+If the email address matches a contact already in your Knock2 account, the existing record is updated with any newly discovered fields and the same `contact_id` is returned.
+
+## Status Values
+
+| Status | Meaning |
+| --- | --- |
+| `full_match` | The enrichment waterfall found a complete profile — 1 credit deducted |
+| `partial_match` | At least one vendor returned data, but the profile is incomplete — 1 credit deducted |
+| `no_match` | No vendor found data for this email — no credit deducted |
+| `error` | The waterfall failed unexpectedly — no credit deducted |
+| `blocked_by_credit_limit` | Your account has exhausted its credits for the billing period (see the `402` response below) |
+
+## Credits
+
+Each call that returns `full_match` or `partial_match` deducts 1 credit from your account balance, regardless of how many vendors were queried internally. Calls that return `no_match` or `error` are free.
+
+<Warning>
+  A `402 Payment Required` response means your account has reached its credit limit. No enrichment was performed and no data was returned. Contact [support@knock2.ai](mailto:support@knock2.ai) to purchase additional credits or upgrade your plan.
+</Warning>
+
+You can check your remaining credit balance at any time from the Knock2 dashboard under **Settings → Usage**.
+
+## Required Scope
+
+Your API key must have the **`enrichment:write`** scope (or the broader **`all:write`** scope) to call `/v1/enrich`. Keys with read-only scopes will receive a `403 Forbidden` response. You can review and update API key scopes in the Knock2 dashboard under **Settings → API Keys**.

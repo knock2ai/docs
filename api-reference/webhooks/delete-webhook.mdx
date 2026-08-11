@@ -1,0 +1,54 @@
+---
+title: "DELETE /v1/webhooks/{webhook_id} — Remove a Webhook"
+sidebarTitle: "Delete Webhook"
+description: "DELETE /v1/webhooks/{webhook_id} permanently removes a webhook subscription and stops all event delivery to that endpoint immediately."
+---
+
+When you no longer need Knock2 to deliver events to a particular endpoint, call `DELETE /v1/webhooks/{webhook_id}` to remove the subscription. Knock2 stops sending payloads to the registered URL immediately upon deletion. This action is permanent — if you need to resume delivery you must create a new subscription.
+
+## Endpoint
+
+```text
+DELETE https://api.knock2.ai/v1/webhooks/{webhook_id}
+```
+
+## Required Scope
+
+Your API key must have the `webhooks:write` scope (or the broader `all:write` scope) to call this endpoint.
+
+## Path Parameter
+
+<ParamField path="webhook_id" type="string" required>
+  The unique identifier of the webhook subscription to delete. You can find this value in the response from [Create Webhook](/api-reference/webhooks/create-webhook) or [List Webhooks](/api-reference/webhooks/list-webhooks).
+</ParamField>
+
+## Parameters
+
+<ParamField query="product_slug" type="string">
+  Act on a direct child tenant's webhook subscription instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`.
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.knock2.ai/v1/webhooks/<webhook_id> \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Response
+
+A successful deletion returns `204 No Content` with an empty response body.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `webhooks:write` scope. |
+| `404` | No webhook subscription found with the given `webhook_id` for this tenant. |
+| `422` | Request could not be processed — verify the `webhook_id` path parameter is correctly formed. |
+| `429` | Rate limit exceeded. Slow down your request rate and retry. |

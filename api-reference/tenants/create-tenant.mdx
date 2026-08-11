@@ -1,0 +1,138 @@
+---
+title: "POST /v1/tenants — Provision a New Tenant"
+sidebarTitle: "Create Tenant"
+description: "POST /v1/tenants provisions a new isolated Knock2 sub-tenant and returns a one-time API key. Requires tenants:write scope on the parent key."
+---
+
+`POST /v1/tenants` provisions a new isolated Knock2 sub-tenant under your parent account. Use this endpoint to programmatically onboard customers in multi-tenant SaaS products — each sub-tenant gets its own API key, tracking script, and data isolation boundary. The response includes a one-time API key and a ready-to-embed script URL for the new tenant. Provisioning a tenant immediately enables IP-to-company identification and person identification for that tenant.
+
+## Endpoint
+
+```text
+POST https://api.knock2.ai/v1/tenants
+```
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  A human-readable display name for the tenant (e.g. `"Acme Corp"`). Shown in the Knock2 dashboard.
+</ParamField>
+
+<ParamField body="domain" type="string" required>
+  The primary website domain for the tenant (e.g. `acme.com`). Knock2 uses this to scope visitor identification to the correct site, and to derive the tenant's `product_slug` (see below).
+</ParamField>
+
+<ParamField body="overview" type="string">
+  A brief description of the tenant's product or business (e.g. `"B2B project management SaaS"`). Providing this helps Knock2 tune ICP scoring for the tenant's specific market.
+</ParamField>
+
+<ParamField body="limits" type="array">
+  An optional array of credit allocations to apply immediately at provisioning time — equivalent to following up with a `PUT /v1/tenants/{product_slug}/limits` call. Each entry has the same shape as that endpoint's request body:
+
+  - `type` (`credits` | `contacts` | `accounts`)
+  - `value` (number, in natural units for the chosen `type`)
+  - `period` (`billing_period` | `month` | `week` | `day` | `lifetime`)
+  - `is_enforced` (boolean, default `true`)
+
+  See [Replace Tenant Limits](/api-reference/tenants/put-tenant-limits) for the full semantics.
+</ParamField>
+
+<ParamField body="scoring_config" type="object">
+  An optional Company Profile \+ Buyer Persona configuration to apply immediately at provisioning time — equivalent to following up with a [`PATCH /v1/tenants/{product_slug}/scoring-config`](/api-reference/tenants/update-scoring-config) call. Every field within it is itself optional; send only what you have.
+
+  - `name`, `category`, `overview`, `linkedin_company_url` — Company Profile fields (note `overview` here is a nested shorthand for the same concept as the top-level `overview` field above — if both are supplied, the top-level `overview` wins).
+  - `persona_description`, `company_description` — plain-English Buyer Persona descriptions used to score contacts and accounts.
+  - `persona_weight` — a number between `0` and `1` weighting persona fit against company fit when scoring.
+
+  See [Get Scoring Config](/api-reference/tenants/get-scoring-config) for the full field reference.
+</ParamField>
+
+<ParamField body="script_config" type="object">
+  An optional tracking-script exclusion configuration to apply immediately at provisioning time — equivalent to following up with a [`PATCH /v1/tenants/{product_slug}/script-config`](/api-reference/tenants/update-script-config) call.
+
+  - `pages_to_ignore` — an array of regex patterns matched against `window.location.pathname` in the browser. A visitor's page fully skips the tracking script — no session, no identification, no credits spent — if it matches any pattern in this list.
+
+  Every pattern is validated with a regex compile check before being saved; a pattern that fails to compile returns `400` and the tenant is still created (this field is applied after the tenant row itself, so a rejected pattern here doesn't roll back provisioning — fix the pattern and call [Update Script Config](/api-reference/tenants/update-script-config) directly instead). See [Get Script Config](/api-reference/tenants/get-script-config) for the full field reference.
+</ParamField>
+
+<ParamField body="product_slug" type="string" deprecated>
+  **Deprecated and ignored.** Earlier versions of this API let callers choose their own `product_slug`. As of KNO-1546, the slug is always derived server-side from `domain`, namespaced under your own account — see below. A value supplied here is silently ignored; read the authoritative slug from the response.
+</ParamField>
+
+## How `product_slug` is derived
+
+You no longer choose a `product_slug`. It's computed from the cleaned `domain` you provide, namespaced under your own account's slug — for example, `acme.com` provisioned by a parent whose own slug is `yourco_com` becomes `acme_com_yourco_com`. This guarantees a child's slug can never collide with, or be squatted ahead of, a future direct signup for that same domain under a different account.
+
+Because the derivation is deterministic, provisioning is idempotent per domain per parent: calling this endpoint twice for the same `domain` under the same parent always resolves to the same slug, and the second call `409`s (see below) rather than creating a duplicate. If a tenant for that domain was previously deactivated, this endpoint does **not** resurrect it — use [`POST /v1/tenants/{product_slug}/activate`](/api-reference/tenants/activate-tenant) instead.
+
+## Example Request
+
+```bash
+curl -X POST https://api.knock2.ai/v1/tenants \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Acme Corp",
+    "domain": "acme.com",
+    "overview": "B2B project management SaaS",
+    "limits": [
+      {"type": "credits", "value": 100, "period": "lifetime"}
+    ],
+    "script_config": {
+      "pages_to_ignore": ["^/careers"]
+    }
+  }'
+```
+
+## Response
+
+A successful request returns `201 Created` with a `TenantCreateData` body.
+
+```json
+{
+  "data": {
+    "product_slug": "acme_com_yourco_com",
+    "name": "Acme Corp",
+    "domain": "acme.com",
+    "script_url": "https://api.knock2.ai/install/acme_com_yourco_com",
+    "api_key": "kn_live_..."
+  }
+}
+```
+
+<ResponseField name="data.product_slug" type="string">
+  The server-derived, parent-namespaced slug identifier for the newly provisioned tenant. Use this value (not anything you sent) in every subsequent `/v1/tenants/{product_slug}` call.
+</ResponseField>
+
+<ResponseField name="data.api_key" type="string">
+  The API key for the new tenant. Returned only once at creation time — store it immediately. Its default scopes are `accounts:read`, `contacts:read`, `filter_sets:read`, `filter_sets:write`, and `tenants:read` — enough for the child to read its own data and remaining allocation, but not to raise its own limits.
+</ResponseField>
+
+<ResponseField name="data.script_url" type="string">
+  The tracking script URL pre-configured for this tenant. Embed it in the tenant's site to begin visitor identification.
+</ResponseField>
+
+<Warning>
+  `api_key` is returned **only once**, at the moment of tenant creation. Store it in a secure secrets manager immediately — Knock2 does not store or expose it again after this response.
+</Warning>
+
+## Side Effects
+
+Provisioning a tenant immediately enables IP-to-company identification and person identification for that tenant. Visitor identification and lead scoring are active as soon as the tracking script is installed on the tenant's site. If `limits` was supplied, the allocation set is written and enforced immediately.
+
+API-created tenants are always combined billing (`billing_mode: "parent"`) — usage rolls up to the calling key's own subscription, same as before this endpoint gained per-child limits.
+
+## Required Scope
+
+This endpoint requires the `tenants:write` scope on your parent API key. Keys that lack this scope receive a `403` error. A key belonging to a child tenant (one that itself has a `parent_product_slug`) can never create sub-tenants of its own, regardless of scope.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `400` | The cleaned `domain` failed validation, or an entry in `limits` was invalid (bad `type`/`period`/`value`). |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:write` scope required for this endpoint, or your key belongs to a child tenant (child tenants cannot create sub-tenants of their own). |
+| `409` | A tenant for this `domain` already exists under your account. If it's currently deactivated, the error message says so — the derived slug is permanent per domain, so picking a different one isn't an option. The message text itself still says "contact [support@knock2.ai](mailto:support@knock2.ai) to reactivate it," but the actual self-service path is [`POST /v1/tenants/{product_slug}/activate`](/api-reference/tenants/activate-tenant) — use that rather than contacting support. |
+| `422` | Request body could not be processed — check that all required fields are present and correctly typed. |
+| `429` | Rate limit exceeded. Slow down your request rate and retry. |

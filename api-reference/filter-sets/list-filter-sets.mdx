@@ -1,0 +1,65 @@
+---
+title: "List All Saved Filter Sets in Your Knock2 Account"
+sidebarTitle: "List Filter Sets"
+description: "GET /v1/filter-sets returns all saved filter sets for your tenant. Use the returned id as filter_set_id when querying accounts or contacts."
+---
+
+Filter sets are reusable collections of criteria — such as company size, industry, or funding stage — that let you segment accounts and contacts consistently across the API. This endpoint returns every filter set saved to your tenant, so you can discover available segments and retrieve their IDs for use in downstream queries.
+
+## Endpoint
+
+```
+GET https://api.knock2.ai/v1/filter-sets
+```
+
+## Parameters
+
+This endpoint takes no query parameters. Include your API key in the `Authorization` header.
+
+## Example Request
+
+```bash
+curl https://api.knock2.ai/v1/filter-sets \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Response
+
+Returns a `FilterSetListResponse` object containing an array of all filter sets for your tenant. This endpoint is not paginated — all filter sets are returned in a single response.
+
+```json
+{
+  "data": [
+    {"id": "fs_01HX...", "name": "Series B SaaS", "type": "account"},
+    {"id": "fs_02HX...", "name": "VP Engineering contacts", "type": "contact"}
+  ]
+}
+```
+
+### Response Fields
+
+<ResponseField name="data" type="array">
+  An array of filter set objects representing all saved segments for your tenant.
+
+  <Expandable title="data[n] fields">
+    <ResponseField name="id" type="string">
+      A unique identifier for the filter set. Pass this value as `filter_set_id` when querying accounts or contacts.
+    </ResponseField>
+
+    <ResponseField name="name" type="string">
+      The human-readable label assigned to the filter set when it was created.
+    </ResponseField>
+
+    <ResponseField name="type" type="string">
+      Indicates whether the filter set targets `account` records or `contact` records.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Error Responses
+
+| Status | Description |
+|--------|-------------|
+| `401`  | Missing or invalid API key. |
+| `422`  | The request is well-formed but contains semantic errors (e.g. an unprocessable parameter value). |
+| `429`  | Rate limit exceeded. Back off and retry. |

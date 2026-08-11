@@ -1,0 +1,498 @@
+---
+title: "GET /v1/contacts — List Identified Contacts"
+sidebarTitle: "List Contacts"
+description: "GET /v1/contacts returns a paginated list of identified individual contacts. Filter by email, account_id, filter_set_id, or inline filter JSON."
+---
+
+The List Contacts endpoint returns a paginated list of every individual contact Knock2 has identified visiting your website. Each record includes personal details such as name, job title, and email address alongside the company they belong to, their ICP (Ideal Customer Profile) score, and a summary of their most recent visit activity. Use the `account_id` parameter to scope results to contacts from a specific company, the `email` parameter for a direct lookup, or build richer segmentation with `filter_set_id` or inline `filters`.
+
+---
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/contacts
+```
+
+---
+
+## Required Scope
+
+Your API key must have the `contacts:read` scope (or the broader `all:read` scope) to call this endpoint.
+
+---
+
+## Request Parameters
+
+<ParamField query="limit" default={50} type="integer">
+  The maximum number of contact records to return in a single response. Must be between `1` and `100`. Defaults to `50`.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  An opaque pagination cursor returned by a previous List Contacts response as `next_cursor`. Omit this parameter on your first request. Pass it on subsequent requests to retrieve the next page of results.
+</ParamField>
+
+<ParamField query="filters" type="string">
+  A URL-encoded JSON array of filter objects to apply to the results, each with `key`, `keyType`, `condition`, and (usually) `value` fields. Filters are combined with a logical AND. Can be combined with `filter_set_id` — see below.
+
+  Example (before URL encoding):
+
+  ```json
+  [{"key":"title","keyType":"string_searchable","condition":"contains","value":"Engineer"}]
+  ```
+</ParamField>
+
+<ParamField query="filter_set_id" type="string">
+  The ID of a saved filter set to apply. Filter sets are created and managed in the Knock2 dashboard or via the Filter Sets API.
+
+  `filters` and `filter_set_id` are **not** mutually exclusive — when both are provided, the saved filter set's conditions are used as the base and the inline `filters` are appended on top (all conditions must match).
+</ParamField>
+
+<ParamField query="email" type="string">
+  Filter results to a single contact by their exact email address (e.g. `jane@acme.com`). Returns at most one record. Use this as a lightweight lookup shortcut instead of constructing a `filters` query.
+</ParamField>
+
+<ParamField query="account_id" type="string">
+  Filter results to contacts associated with a specific account. Pass the Knock2 account ID (e.g. `acc_01HX...`) to scope the list to that company's identified visitors.
+</ParamField>
+
+<ParamField query="product_slug" type="string">
+  Read a direct child tenant's contacts instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`. If you also pass `filter_set_id`, the filter set must belong to the tenant being read.
+</ParamField>
+
+---
+
+## Example Requests
+
+<CodeGroup>
+
+```bash Basic request
+curl https://api.knock2.ai/v1/contacts \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash Lookup by email
+curl "https://api.knock2.ai/v1/contacts?email=jane@acme.com" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash Filter by account
+curl "https://api.knock2.ai/v1/contacts?account_id=acc_01HX..." \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash With pagination
+curl "https://api.knock2.ai/v1/contacts?limit=25&cursor=eyJpZCI6ImNudF8wMUhYIn0=" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+---
+
+## Response
+
+Returns `200 OK` with a paginated list of contact objects.
+
+```json Example response
+{
+  "data": [
+    {
+      "id": "cnt_01HX...",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "name": "Jane Smith",
+      "title": "Head of Engineering",
+      "email": "jane@acme.com",
+      "business_email": "jane@acme.com",
+      "personal_email": null,
+      "linkedin_url": "https://www.linkedin.com/in/janesmith",
+      "seniority": "Director",
+      "departments": ["Engineering"],
+      "company_id": "acc_01HX...",
+      "company_name": "Acme Corp",
+      "company_domain": "acme.com",
+      "icp_scoring_score": 87,
+      "icp_scoring_reason": "Matches target industry and seniority level.",
+      "latest_visit_page": "/docs/api",
+      "latest_visit_datetime": "2024-06-01T14:23:00Z",
+      "page_visits": [
+        {
+          "page": "/docs/api",
+          "start_time": "2024-06-01T14:20:00Z",
+          "end_time": "2024-06-01T14:23:45Z"
+        },
+        {
+          "page": "/pricing",
+          "start_time": "2024-06-01T14:15:00Z",
+          "end_time": "2024-06-01T14:19:50Z"
+        }
+      ],
+      "created_at": "2024-05-20T11:00:00Z"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "eyJpZCI6ImNudF8wMUhYIn0="
+}
+```
+
+### Response Fields
+
+<ResponseField name="data" type="array" required>
+  An array of contact objects for the current page.
+
+  <Expandable title="Contact object fields">
+    <ResponseField name="id" type="string">
+      The unique Knock2 identifier for this contact.
+    </ResponseField>
+
+    <ResponseField name="first_name" type="string">
+      The contact's first name.
+    </ResponseField>
+
+    <ResponseField name="last_name" type="string">
+      The contact's last name.
+    </ResponseField>
+
+    <ResponseField name="name" type="string">
+      The contact's full display name.
+    </ResponseField>
+
+    <ResponseField name="title" type="string">
+      The contact's job title (e.g. `"Head of Engineering"`).
+    </ResponseField>
+
+    <ResponseField name="email" type="string">
+      The contact's primary email address, if identified.
+    </ResponseField>
+
+    <ResponseField name="business_email" type="string">
+      The contact's work email address.
+    </ResponseField>
+
+    <ResponseField name="personal_email" type="string">
+      The contact's personal email address, if available.
+    </ResponseField>
+
+    <ResponseField name="linkedin_url" type="string">
+      URL to the contact's LinkedIn profile.
+    </ResponseField>
+
+    <ResponseField name="seniority" type="string">
+      The seniority level of the contact's role (e.g. `"Director"`, `"VP"`, `"C-Suite"`, `"Manager"`).
+    </ResponseField>
+
+    <ResponseField name="departments" type="array">
+      A list of functional departments the contact is associated with (e.g. `["Engineering"]`, `["Sales", "Marketing"]`).
+    </ResponseField>
+
+    <ResponseField name="phone_numbers" type="array">
+      A list of phone numbers associated with the contact.
+    </ResponseField>
+
+    <ResponseField name="address_city" type="string">
+      The city the contact is based in.
+    </ResponseField>
+
+    <ResponseField name="address_state" type="string">
+      The state or province the contact is based in.
+    </ResponseField>
+
+    <ResponseField name="address_zip_code" type="string">
+      The postal or ZIP code for the contact's address.
+    </ResponseField>
+
+    <ResponseField name="address_country" type="string">
+      The country the contact is based in (ISO 3166-1 alpha-2 code, e.g. `"US"`).
+    </ResponseField>
+
+    <ResponseField name="location" type="string">
+      A human-readable location string combining city, state, and country.
+    </ResponseField>
+
+    <ResponseField name="match_type" type="string">
+      How this contact was matched to a website visit (e.g. `"email"`, `"ip"`).
+    </ResponseField>
+
+    <ResponseField name="is_qualified" type="boolean">
+      `true` if this contact has been marked as qualified based on your configured criteria.
+    </ResponseField>
+
+    <ResponseField name="is_business_email_valid" type="boolean">
+      `true` if the contact's business email address has been validated as deliverable.
+    </ResponseField>
+
+    <ResponseField name="business_email_last_validated_at" type="string">
+      ISO 8601 timestamp of when the business email was last validated.
+    </ResponseField>
+
+    <ResponseField name="last_enriched_at" type="string">
+      ISO 8601 timestamp of when this contact's profile was last enriched.
+    </ResponseField>
+
+    <ResponseField name="company_id" type="string">
+      The Knock2 account ID of the company this contact is associated with.
+    </ResponseField>
+
+    <ResponseField name="company_name" type="string">
+      The display name of the company this contact is associated with.
+    </ResponseField>
+
+    <ResponseField name="company_domain" type="string">
+      The primary web domain of the company this contact is associated with.
+    </ResponseField>
+
+    <ResponseField name="company_linkedin_url" type="string">
+      URL to the company's LinkedIn profile page.
+    </ResponseField>
+
+    <ResponseField name="company_industry" type="string">
+      The industry classification of the contact's company.
+    </ResponseField>
+
+    <ResponseField name="company_sector" type="string">
+      The broader sector of the contact's company.
+    </ResponseField>
+
+    <ResponseField name="company_description" type="string">
+      A short description of the contact's company.
+    </ResponseField>
+
+    <ResponseField name="company_estimated_employee_count" type="string">
+      A bucketed headcount range for the contact's company.
+    </ResponseField>
+
+    <ResponseField name="company_employees_min" type="integer">
+      The lower bound of the company's headcount range.
+    </ResponseField>
+
+    <ResponseField name="company_employees_max" type="integer">
+      The upper bound of the company's headcount range.
+    </ResponseField>
+
+    <ResponseField name="company_estimated_annual_revenue" type="string">
+      A bucketed annual revenue range for the contact's company.
+    </ResponseField>
+
+    <ResponseField name="company_annual_revenue_min" type="number">
+      The lower bound of the company's annual revenue range in USD.
+    </ResponseField>
+
+    <ResponseField name="company_annual_revenue_max" type="number">
+      The upper bound of the company's annual revenue range in USD.
+    </ResponseField>
+
+    <ResponseField name="company_phone_numbers" type="array">
+      A list of phone numbers associated with the contact's company.
+    </ResponseField>
+
+    <ResponseField name="company_tags" type="array">
+      A list of tags applied to the contact's company account in Knock2.
+    </ResponseField>
+
+    <ResponseField name="company_technology_tags" type="array">
+      A list of technologies detected in use at the contact's company.
+    </ResponseField>
+
+    <ResponseField name="company_address_city" type="string">
+      The city where the contact's company is located.
+    </ResponseField>
+
+    <ResponseField name="company_address_state" type="string">
+      The state or province where the contact's company is located.
+    </ResponseField>
+
+    <ResponseField name="company_address_zip_code" type="string">
+      The postal or ZIP code for the contact's company address.
+    </ResponseField>
+
+    <ResponseField name="company_address_country" type="string">
+      The country where the contact's company is located (ISO 3166-1 alpha-2 code).
+    </ResponseField>
+
+    <ResponseField name="company_location" type="string">
+      A human-readable location string for the contact's company.
+    </ResponseField>
+
+    <ResponseField name="company_last_funding_date" type="string">
+      ISO 8601 date of the company's most recent funding event.
+    </ResponseField>
+
+    <ResponseField name="company_last_funding_round_type" type="string">
+      The type of the company's most recent funding round.
+    </ResponseField>
+
+    <ResponseField name="company_last_funding_amount" type="string">
+      The amount raised in the company's most recent funding round.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_source" type="string">
+      The lead source of the associated CRM deal, if synced.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_name" type="string">
+      The name of the associated CRM deal, if synced.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_stage" type="string">
+      The pipeline stage of the associated CRM deal.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_value_usd" type="number">
+      The monetary value of the associated CRM deal in USD.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_close_datetime" type="string">
+      ISO 8601 timestamp of the expected or actual close date for the associated CRM deal.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_owner_email" type="string">
+      Email address of the deal owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_owner_first_name" type="string">
+      First name of the deal owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_owner_last_name" type="string">
+      Last name of the deal owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_company_owner_email" type="string">
+      Email address of the company owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_company_owner_first_name" type="string">
+      First name of the company owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_company_owner_last_name" type="string">
+      Last name of the company owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="hubspot_company_id" type="string">
+      The corresponding HubSpot Company record ID, if synced.
+    </ResponseField>
+
+    <ResponseField name="salesforce_account_id" type="string">
+      The corresponding Salesforce Account record ID, if synced.
+    </ResponseField>
+
+    <ResponseField name="latest_visit_datetime" type="string">
+      ISO 8601 timestamp of the contact's most recent visit.
+    </ResponseField>
+
+    <ResponseField name="latest_visit_page" type="string">
+      The URL path of the most recent page this contact visited on your website.
+    </ResponseField>
+
+    <ResponseField name="page_visits" type="array">
+      The contact's most recent page visits (up to 20), newest first. Each entry has `page` (string), `start_time` (ISO 8601), and `end_time` (ISO 8601, `null` if the visit is still open). For a contact's complete visit history beyond this cap, use [List Activity](/api-reference/activity/list-activity) with `contact_id`.
+    </ResponseField>
+
+    <ResponseField name="total_browsing_time_seconds" type="integer">
+      The total cumulative time in seconds this contact has spent on your website.
+    </ResponseField>
+
+    <ResponseField name="utms" type="object">
+      A map of all UTM parameters captured from this contact's visits.
+    </ResponseField>
+
+    <ResponseField name="document_referrer" type="string">
+      The referrer URL from the contact's most recent visit.
+    </ResponseField>
+
+    <ResponseField name="utm_source" type="string">
+      The `utm_source` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="utm_medium" type="string">
+      The `utm_medium` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="utm_campaign" type="string">
+      The `utm_campaign` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="utm_term" type="string">
+      The `utm_term` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="utm_content" type="string">
+      The `utm_content` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="icp_scoring_icp_id" type="string">
+      The ID of the ICP definition used to score this contact.
+    </ResponseField>
+
+    <ResponseField name="icp_scoring_icp_title" type="string">
+      The display name of the ICP definition used to score this contact.
+    </ResponseField>
+
+    <ResponseField name="icp_scoring_score" type="integer">
+      A numeric ICP fit score between `0` and `100`. Higher scores indicate a closer match to your Ideal Customer Profile.
+    </ResponseField>
+
+    <ResponseField name="icp_scoring_reason" type="string">
+      A human-readable explanation of why this contact received their ICP score.
+    </ResponseField>
+
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp of when this contact was first identified by Knock2.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="has_more" type="boolean" required>
+  `true` if there are additional pages of results after this one. Pass `next_cursor` as the `cursor` parameter in your next request to retrieve them.
+</ResponseField>
+
+<ResponseField name="next_cursor" type="string | null" required>
+  An opaque string you pass as the `cursor` parameter in your next request to retrieve the next page. `null` when `has_more` is `false` and you have reached the last page.
+</ResponseField>
+
+---
+
+## Error Responses
+
+| HTTP Status | `code` | Description |
+| --- | --- | --- |
+| `401` | `unauthorized` | Your API key is missing or invalid. |
+| `403` | `forbidden` | Your API key does not have the `contacts:read` scope. |
+| `422` | `invalid_request` | One or more query parameters failed validation. |
+| `429` | `rate_limit_exceeded` | You have exceeded the rate limit. Apply exponential backoff and retry. |
+
+```json 401 Unauthorized
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "Invalid or missing API key.",
+    "details": null
+  }
+}
+```
+
+```json 422 Invalid Request
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "Missing required fields: limit",
+    "details": null
+  }
+}
+```
+
+```json 429 Rate limit exceeded
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Too many requests. Please slow down and retry with exponential backoff.",
+    "details": null
+  }
+}
+```

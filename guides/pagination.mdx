@@ -1,0 +1,151 @@
+---
+title: "Paginating Through Knock2 API Results with Cursors"
+sidebarTitle: "Pagination"
+description: "Knock2 uses cursor-based pagination for list endpoints. Learn how to use next_cursor and has_more to walk through large result sets efficiently."
+---
+
+When you query list endpoints like `GET /v1/accounts` or `GET /v1/contacts`, Knock2 returns results in pages rather than all at once. Understanding how to move through those pages — and how to know when you've reached the end — lets you build reliable data exports, sync pipelines, and bulk processing jobs without missing records or hitting memory limits.
+
+## Cursor-Based Pagination
+
+Knock2 list endpoints use **cursor-based pagination** rather than traditional page numbers. Instead of requesting "page 3", you request "the next batch after this cursor". Each response hands you a cursor that points to the position immediately after the last record returned — pass it back in your next request to continue from exactly that point.
+
+This approach has two important advantages over page numbers:
+
+- **Stable results**: newly created records don't shift earlier pages, so you won't see duplicates or skip records mid-iteration.
+- **Efficient at scale**: cursor lookups use indexed fields internally, so performance stays consistent even when iterating millions of records.
+
+## Request Parameters
+
+Include these query parameters on any list endpoint to control pagination:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `limit` | integer | `50` | Number of records to return per page. Accepted range: 1–100. |
+| `cursor` | string | — | Opaque cursor from the previous response's `next_cursor`. Omit this on the first request. |
+
+## Response Envelope
+
+Every list response wraps records in a consistent envelope:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `data` | array | The records for the current page. |
+| `has_more` | boolean | `true` if additional records exist beyond this page. |
+| `next_cursor` | string \| null | Pass this value as `cursor` in your next request. `null` when `has_more` is `false`. |
+
+A typical paginated response looks like this:
+
+```json
+{
+  "data": [
+    { "id": "550e8400-e29b-41d4-a716-446655440000", "name": "Acme Corp", "domain": "acme.com" },
+    { "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "name": "Globex Inc", "domain": "globex.com" }
+  ],
+  "has_more": true,
+  "next_cursor": "eyJjcmVhdGVkX2F0IjogIjIwMjQtMDYtMDFUMTQ6MjA6MDAiLCAiaWQiOiAiNmJhN2I4MTAtOWRhZC0xMWQxLTgwYjQtMDBjMDRmZDQzMGM4In0="
+}
+```
+
+When `has_more` is `false`, you have reached the last page. The `next_cursor` will be `null` and there is no need to make another request.
+
+## Walk Through All Pages
+
+Use a loop that continues until `has_more` is `false`. Here are complete examples in Node.js and Python:
+
+<CodeGroup>
+
+```javascript Node.js
+async function fetchAllAccounts(apiKey) {
+  const accounts = [];
+  let cursor = null;
+  let body;
+
+  do {
+    const url = new URL('https://api.knock2.ai/v1/accounts');
+    url.searchParams.set('limit', '100');
+    if (cursor) url.searchParams.set('cursor', cursor);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}` }
+    });
+    body = await res.json();
+
+    accounts.push(...body.data);
+    cursor = body.next_cursor;
+  } while (body.has_more);
+
+  return accounts;
+}
+```
+
+```python Python
+import requests
+
+def fetch_all_accounts(api_key: str) -> list:
+    accounts = []
+    cursor = None
+    base_url = "https://api.knock2.ai/v1/accounts"
+    headers = {"Authorization": f"Bearer {api_key}"}
+
+    while True:
+        params = {"limit": 100}
+        if cursor:
+            params["cursor"] = cursor
+
+        resp = requests.get(base_url, headers=headers, params=params)
+        body = resp.json()
+        accounts.extend(body["data"])
+
+        if not body["has_more"]:
+            break
+        cursor = body["next_cursor"]
+
+    return accounts
+```
+
+</CodeGroup>
+
+Both examples fetch pages of 100 records (the maximum) and accumulate them into a single list. Adjust the `limit` value downward if you want to process records in smaller batches.
+
+<Note>
+  Cursors are opaque strings — do not attempt to parse, decode, or construct them manually. Their internal format may change between API versions without notice. Always treat `next_cursor` as an atomic value you store and pass back verbatim.
+</Note>
+
+## Rate Limiting
+
+Knock2 enforces a rate limit on all API endpoints. If you send requests too quickly while paginating a large dataset, you will receive a `429 Too Many Requests` response.
+
+<Tip>
+  Add a short delay between paginated requests — 100–250 ms is usually sufficient — to stay comfortably within the rate limit. If you do receive a `429`, inspect the `X-RateLimit-Reset` response header (a Unix timestamp): wait until that time before retrying. There is no `Retry-After` header.
+</Tip>
+
+The following example adds a delay between pages in the Node.js loop:
+
+```javascript Node.js
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchAllAccountsWithDelay(apiKey) {
+  const accounts = [];
+  let cursor = null;
+  let body;
+
+  do {
+    const url = new URL('https://api.knock2.ai/v1/accounts');
+    url.searchParams.set('limit', '100');
+    if (cursor) url.searchParams.set('cursor', cursor);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}` }
+    });
+    body = await res.json();
+
+    accounts.push(...body.data);
+    cursor = body.next_cursor;
+
+    if (body.has_more) await sleep(150); // 150 ms between pages
+  } while (body.has_more);
+
+  return accounts;
+}
+```

@@ -1,0 +1,116 @@
+---
+title: "List Recent Lead Score Changes Across Your Knock2 Tenant"
+sidebarTitle: "Recent Scores"
+description: "GET /v1/scores/recent returns the most recent lead score changes across your tenant — useful for polling, Zapier triggers, and backfill pipelines."
+---
+
+Instead of polling individual account or contact scores, this endpoint gives you a tenant-wide feed of recent score changes — most recent first. Use it to power lightweight polling loops, seed Zapier triggers, or backfill your CRM whenever a new lead surpasses your qualification threshold.
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/scores/recent
+```
+
+## Required Scope
+
+Your API key must have the `scores:read` scope (or the broader `all:read` scope) to call this endpoint.
+
+## Parameters
+
+<ParamField query="limit" default="50" type="integer">
+  The number of score-change records to return per page. Accepts values between `1` and `100`.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  A pagination cursor returned in a previous response as `next_cursor`. Pass this value to retrieve the next page of results.
+</ParamField>
+
+<ParamField query="product_slug" type="string">
+  Read a direct child tenant's score changes instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`.
+</ParamField>
+
+## Example Request
+
+```bash
+curl https://api.knock2.ai/v1/scores/recent \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Response
+
+Returns a `RecentScoresResponse` object containing an array of score-change records sorted in descending order by `created_at`.
+
+```json
+{
+  "data": [
+    {
+      "id": "rsc_01HX...",
+      "account_id": "acc_01HX...",
+      "contact_id": null,
+      "score": 91,
+      "reason": "High engagement: 5 visits to /demo in 24 hours.",
+      "created_at": "2024-06-02T08:15:00Z"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "eyJpZCI6InJzY18wMUhYIn0="
+}
+```
+
+### Response Fields
+
+<ResponseField name="data" type="array">
+  An array of recent score-change records, sorted most-recent first.
+
+  <Expandable title="data[n] fields">
+    <ResponseField name="id" type="string">
+      A unique identifier for this score-change record. Use this field to deduplicate entries when polling the endpoint repeatedly.
+    </ResponseField>
+
+    <ResponseField name="account_id" type="string | null">
+      The ID of the account whose score changed, or `null` if the change belongs to a contact.
+    </ResponseField>
+
+    <ResponseField name="contact_id" type="string | null">
+      The ID of the contact whose score changed, or `null` if the change belongs to an account.
+    </ResponseField>
+
+    <ResponseField name="score" type="integer">
+      The new numeric lead score at the time of the change, from `0` to `100`.
+    </ResponseField>
+
+    <ResponseField name="reason" type="string">
+      A human-readable explanation of what drove the score change.
+    </ResponseField>
+
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp marking when this score change was recorded. Use this field for time-based filtering when building polling pipelines.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="has_more" type="boolean">
+  `true` if additional pages of results are available. Pass `next_cursor` in your next request to retrieve them.
+</ResponseField>
+
+<ResponseField name="next_cursor" type="string | null">
+  A cursor string to retrieve the next page of results. `null` when there are no further pages.
+</ResponseField>
+
+<Note>
+  Each entry in `data` mirrors the `score.changed` webhook payload, with `id` and `created_at` added for cursor-based pagination and deduplication. If you already use the `score.changed` webhook, the shape of each record will be familiar.
+</Note>
+
+## Error Responses
+
+| Status | Description |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `scores:read` scope. |
+| `422` | The request is well-formed but contains semantic errors (e.g. an unprocessable parameter value). |
+| `429` | Rate limit exceeded. Back off and retry. |

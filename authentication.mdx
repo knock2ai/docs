@@ -1,0 +1,221 @@
+---
+title: "Knock2 API Authentication: API Keys, Scopes, and Errors"
+sidebarTitle: "Authentication"
+description: "Learn how to get your Knock2 API key, pass it in requests using the Authorization header, and understand authentication error responses."
+---
+
+Every request you make to the Knock2 REST API must be authenticated with an API key. Knock2 uses the industry-standard Bearer token scheme — you include your key in an `Authorization` header on every HTTP request, and Knock2 validates it before processing anything. This page explains how to obtain a key, how to format the header correctly, what permissions (scopes) keys can carry, and how to interpret authentication and rate-limiting errors when they occur.
+
+## Getting your API key
+
+Log in to the [Knock2 dashboard](https://app.knock2.ai) and go to **Settings → API Keys**. Click **Create API Key**, enter a descriptive label (for example, `backend-production` or `zapier-integration`), and copy the key that appears.
+
+<Warning>
+  Your API key is displayed **only once**, immediately after creation. If you navigate away without saving it, you will need to revoke the key and generate a new one. Store your key in a secrets manager or environment variable right away — never commit it to source control.
+</Warning>
+
+All Knock2 API keys are prefixed with `kn_live_` so you can recognise them in logs and configuration files:
+
+```text
+kn_live_aBcDeFgHiJkLmNoPqRsTuVwXyZ012345
+```
+
+If you believe a key has been exposed, revoke it immediately from the **Settings → API Keys** page and generate a replacement. Revoking a key takes effect within seconds.
+
+## Making authenticated requests
+
+Pass your API key in the `Authorization` header of every request, using the `Bearer` token format:
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.knock2.ai/v1/me \
+  -H "Authorization: Bearer kn_live_your_api_key_here"
+```
+
+```python Python
+import requests
+
+KNOCK2_API_KEY = "kn_live_your_api_key_here"  # load from env in production
+
+response = requests.get(
+    "https://api.knock2.ai/v1/me",
+    headers={"Authorization": f"Bearer {KNOCK2_API_KEY}"},
+)
+print(response.json())
+```
+
+```javascript Node.js
+const KNOCK2_API_KEY = process.env.KNOCK2_API_KEY;
+
+const response = await fetch("https://api.knock2.ai/v1/me", {
+  headers: {
+    Authorization: `Bearer ${KNOCK2_API_KEY}`,
+  },
+});
+const data = await response.json();
+console.log(data);
+```
+
+```go Go
+package main
+
+import (
+  "fmt"
+  "net/http"
+  "os"
+)
+
+func main() {
+  apiKey := os.Getenv("KNOCK2_API_KEY")
+  req, _ := http.NewRequest("GET", "https://api.knock2.ai/v1/me", nil)
+  req.Header.Set("Authorization", "Bearer "+apiKey)
+
+  client := &http.Client{}
+  resp, err := client.Do(req)
+  if err != nil {
+    panic(err)
+  }
+  defer resp.Body.Close()
+  fmt.Println(resp.Status)
+}
+```
+
+</CodeGroup>
+
+<Note>
+  Knock2 uses **Bearer token** format. The `Authorization` header value must begin with the literal word `Bearer` (capital B), followed by a single space, followed by your API key. Omitting the word `Bearer` or using a different scheme (such as `Token` or `Basic`) will result in a `401` error.
+</Note>
+
+## API key scopes
+
+When you create an API key you assign it one or more scopes. Scopes follow the principle of least privilege — grant only the permissions a given integration actually needs.
+
+| Scope | What it allows |
+| --- | --- |
+| `all:read` | Satisfies every `*:read` scope below — read access to accounts, contacts, scores, activity, filter sets, and webhooks |
+| `all:write` | Satisfies every `*:write` scope below — write access to filter sets, enrichment, webhooks, and tenant provisioning |
+| `accounts:read` | List and fetch accounts (`GET /v1/accounts`, `GET /v1/accounts/{id}`) |
+| `contacts:read` | List and fetch contacts (`GET /v1/contacts`, `GET /v1/contacts/{id}`) |
+| `activity:read` | Read page visit history (`GET /v1/activity`) |
+| `scores:read` | Read lead scores (`GET /v1/scores`, `GET /v1/scores/recent`) |
+| `webhooks:read` | List webhook subscriptions and retrieve a subscription's signing key |
+| `webhooks:write` | Create and delete webhook subscriptions |
+| `filter_sets:read` | List saved filter sets |
+| `filter_sets:write` | Create, update, and delete filter sets |
+| `enrichment:write` | Call `POST /v1/enrich` to trigger contact enrichment |
+| `tenants:read` | List and read your child tenants, their credit allocations, and their usage (`GET /v1/tenants`, `GET /v1/tenants/{slug}`, `GET /v1/tenants/{slug}/limits`, `GET /v1/tenants/{slug}/usage`) |
+| `tenants:write` | Provision, update, deactivate, and reactivate sub-tenants, and set their credit allocations, via the multi-tenant API |
+
+A key missing the scope an endpoint requires gets a `403 Forbidden` — see [Authentication errors](#authentication-errors) below.
+
+<Note>
+  A valid, correctly-scoped key can still be blocked with `402 Payment Required` on every `/v1` route, including `GET /v1/me`, if the workspace it belongs to is deactivated (`is_product_slug_active = false`) — see [Deactivate a Tenant](/api-reference/tenants/delete-tenant). This is separate from the enrichment-credit `402` and isn't fixed by rotating keys or scopes.
+</Note>
+
+`GET /v1/me` confirms a key is valid and returns the tenant it belongs to, but does not return the key's scopes:
+
+```json
+{
+  "data": {
+    "product_slug": "your_tenant",
+    "status": "ok"
+  }
+}
+```
+
+## Authentication errors
+
+A `401 Unauthorized` response means Knock2 could not verify your identity. The response body follows Knock2's standard error envelope:
+
+```json
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "Invalid or missing API key"
+  }
+}
+```
+
+<Warning>
+  A `401` response means one of three things: the `Authorization` header is absent, the key is malformed (for example, a truncated copy-paste), or the key has been revoked. Check each possibility in order. If you recently rotated your key, make sure all services are using the new value.
+</Warning>
+
+Common causes and fixes:
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| `401` on every request | Missing `Bearer ` prefix | Ensure the header value is `Bearer kn_live_...` |
+| `401` after key rotation | Old key still in use | Update the key in your environment variables and redeploy |
+| `403 Forbidden` on any endpoint | Key lacks the required scope for that operation (see the scope table above) | Create a new key with the correct scope, or add `all:read`/`all:write` |
+
+## Rate limiting
+
+Knock2 enforces per-key rate limits to protect the stability of the platform. If you exceed your allotted request volume, the API returns a `429 Too Many Requests` response:
+
+```json
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit of 60 requests/minute exceeded"
+  }
+}
+```
+
+There is no `retry_after` field in the body. Instead, every API response includes the following headers so you can monitor your usage proactively and know when to retry:
+
+| Header | Description |
+| --- | --- |
+| `X-RateLimit-Limit` | Total requests allowed in the current window |
+| `X-RateLimit-Remaining` | Requests remaining in the current window |
+| `X-RateLimit-Reset` | Unix timestamp when the window resets |
+
+<Warning>
+  Do not retry immediately on a `429`. Tight retry loops will keep triggering the limit. Use **exponential backoff** based on the `X-RateLimit-Reset` header (a Unix timestamp for when the current window resets), doubling your wait on each subsequent attempt up to a reasonable cap.
+</Warning>
+
+Here's a minimal exponential backoff implementation:
+
+<CodeGroup>
+
+```python Python
+import time
+import requests
+
+def get_with_backoff(url, headers, max_retries=5):
+    wait = 2  # initial wait in seconds, used as a fallback
+    for attempt in range(max_retries):
+        response = requests.get(url, headers=headers)
+        if response.status_code == 429:
+            reset_ts = int(response.headers.get("X-RateLimit-Reset", 0))
+            delay = max(reset_ts - time.time(), wait) if reset_ts else wait
+            print(f"Rate limited. Retrying in {delay:.0f}s...")
+            time.sleep(delay)
+            wait = min(wait * 2, 60)  # cap at 60 seconds
+            continue
+        response.raise_for_status()
+        return response.json()
+    raise Exception("Max retries exceeded")
+```
+
+```javascript Node.js
+async function getWithBackoff(url, headers, maxRetries = 5) {
+  let wait = 2000; // initial wait in ms, used as a fallback
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await fetch(url, { headers });
+    if (response.status === 429) {
+      const resetTs = Number(response.headers.get("X-RateLimit-Reset") || 0);
+      const delay = resetTs ? Math.max(resetTs * 1000 - Date.now(), wait) : wait;
+      console.log(`Rate limited. Retrying in ${delay}ms...`);
+      await new Promise((r) => setTimeout(r, delay));
+      wait = Math.min(wait * 2, 60000); // cap at 60 seconds
+      continue;
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+  throw new Error("Max retries exceeded");
+}
+```
+
+</CodeGroup>

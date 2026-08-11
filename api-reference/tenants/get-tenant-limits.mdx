@@ -1,0 +1,67 @@
+---
+title: "GET /v1/tenants/{product_slug}/limits — Get a Tenant's Credit Allocations"
+sidebarTitle: "Get Tenant Limits"
+description: "GET /v1/tenants/{product_slug}/limits returns every allocation set on a tenant, with used/remaining for the current window. Requires tenants:read."
+---
+
+`GET /v1/tenants/{product_slug}/limits` returns every allocation currently set on a tenant, each with used/remaining for its own window.
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/tenants/{product_slug}/limits
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  Your own tenant, or a direct child's slug.
+</ParamField>
+
+## Example Request
+
+```bash
+curl https://api.knock2.ai/v1/tenants/acme_com_yourco_com/limits \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": [
+    {
+      "type": "credits",
+      "value": 100,
+      "period": "lifetime",
+      "is_enforced": true,
+      "equivalent_credits": 100,
+      "used": 4,
+      "remaining": 96
+    }
+  ]
+}
+```
+
+<ResponseField name="data[].value" type="number">
+  Always in natural units for `type` — contacts, accounts, or credits.
+</ResponseField>
+
+<ResponseField name="data[].equivalent_credits" type="number">
+  The same cap expressed in credits, so allocations of different `type`s are comparable.
+</ResponseField>
+
+An empty `data` array means the tenant has no allocation set and is unlimited within its parent's own pool.
+
+## Required Scope
+
+Requires `tenants:read`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:read` scope. |
+| `404` | No tenant found with this `product_slug` under your account. |
+| `429` | Rate limit exceeded. |

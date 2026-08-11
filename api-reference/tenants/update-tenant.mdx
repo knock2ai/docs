@@ -1,0 +1,76 @@
+---
+title: "PATCH /v1/tenants/{product_slug} — Update a Tenant"
+sidebarTitle: "Update Tenant"
+description: "PATCH /v1/tenants/{product_slug} updates a direct child tenant's name and/or domain. Changing domain re-provisions Clearbit and Visual Visitor. Requires tenants:write."
+---
+
+`PATCH /v1/tenants/{product_slug}` updates a direct child tenant's `name` and/or `domain`. `product_slug` itself is never updatable — it's the tenant's permanent identifier.
+
+## Endpoint
+
+```text
+PATCH https://api.knock2.ai/v1/tenants/{product_slug}
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  The direct child tenant's slug.
+</ParamField>
+
+## Request Body
+
+At least one of the following is required.
+
+<ParamField body="name" type="string">
+  A new display name for the tenant. A pure display-value write — no other side effects.
+</ParamField>
+
+<ParamField body="domain" type="string">
+  A new primary domain for the tenant. Treated as a re-provisioning operation, not a plain rename (see below).
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X PATCH https://api.knock2.ai/v1/tenants/acme_com_yourco_com \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"domain": "acme-corp.com"}'
+```
+
+## What changing `domain` does
+
+Changing `domain` re-registers the tenant with Clearbit and re-points its Visual Visitor customer at the new domain, so identification doesn't silently keep resolving against the old site. The new domain is re-checked against the same domain-reservation rule enforced at tenant creation — if another workspace already claims it, the request fails with `409` and **nothing is written**, even if `name` was also supplied in the same request. `name` is applied only after any `domain` validation succeeds.
+
+## Response
+
+Returns the updated tenant, same shape as [Get Tenant](/api-reference/tenants/get-tenant):
+
+```json
+{
+  "data": {
+    "product_slug": "acme_com_yourco_com",
+    "name": "Acme Corp",
+    "domain": "acme-corp.com",
+    "is_active": true,
+    "billing_mode": "parent",
+    "limits": []
+  }
+}
+```
+
+## Required Scope
+
+Requires `tenants:write`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Neither `name` nor `domain` was supplied, or the new `domain` failed validation. |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:write` scope. |
+| `404` | No tenant found with this `product_slug` as a direct child of your account. |
+| `409` | The new `domain` is already registered to another workspace. |
+| `429` | Rate limit exceeded. |

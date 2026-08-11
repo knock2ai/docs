@@ -1,0 +1,61 @@
+---
+title: "DELETE /v1/tenants/{product_slug} — Deactivate a Tenant"
+sidebarTitle: "Delete Tenant"
+description: "DELETE /v1/tenants/{product_slug} deactivates a sub-tenant, stopping its tracking script and visitor identification. Data is retained."
+---
+
+When you need to offboard a customer or suspend a sub-tenant, call `DELETE /v1/tenants/{product_slug}` to deactivate it. Knock2 immediately stops processing events from the tenant's tracking script and halts all visitor identification for that tenant. This is a soft delete — all historical data is retained, and reactivation is a self-service `POST /v1/tenants/{product_slug}/activate` call away.
+
+`is_product_slug_active` is the master switch for the tenant's entire `/v1` API surface, not just identification — while deactivated, every `/v1` route called with that tenant's own key (including `GET /v1/me`) returns `402 Payment Required` instead of its normal response.
+
+<Note>
+  This also runs in reverse for combined-billing children: if **your own** (parent) workspace is deactivated, every `billing_mode: "parent"` child goes dark too, even though each child's individual `is_product_slug_active` flag is untouched — nobody is paying for those children's usage while the parent is off. `billing_mode: "self"` children are unaffected by the parent's status. Reactivating the parent automatically restores every child that cascade turned off, with no separate per-child reactivation step.
+</Note>
+
+## Endpoint
+
+```text
+DELETE https://api.knock2.ai/v1/tenants/{product_slug}
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  The unique slug identifier of the sub-tenant to deactivate (e.g. `acme_corp`). This is the same `product_slug` you specified when creating the tenant.
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.knock2.ai/v1/tenants/acme_corp \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+## Response
+
+A successful deactivation returns `204 No Content` with an empty response body.
+
+## What Deactivation Does
+
+Deactivation is a **soft delete**. The following happens immediately:
+
+- The tenant's tracking script stops recording new visitor sessions.
+- Visitor identification and lead scoring are suspended.
+- The tenant's own API key starts getting `402 Payment Required` on every `/v1` route — it is **not** revoked, so it resumes working immediately on reactivation with no re-issuing needed.
+
+The following is **not** affected:
+
+- All previously collected visitor data, identified contacts, and accounts are retained.
+- The `product_slug` is reserved for this domain under your account — `POST /v1/tenants` with the same `domain` returns `409`, pointing at reactivation rather than letting you provision a fresh tenant in its place.
+
+To reactivate a deactivated tenant, call [`POST /v1/tenants/{product_slug}/activate`](/api-reference/tenants/activate-tenant) with the same parent key — no need to contact support. This is the only way back for a deactivated tenant's domain: because `product_slug` is deterministically derived from `domain` (KNO-1546), `POST /v1/tenants` permanently `409`s for a domain that already has a (deactivated) tenant. To permanently delete a tenant's data instead of reactivating it, contact [Knock2 support](https://knock2.ai).
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key is missing the `tenants:write` scope. |
+| `404` | No tenant found with the given `product_slug` under your parent account — this includes tenants that exist but were provisioned by a different parent key; ownership and existence are not distinguished in the response. |
+| `422` | Request could not be processed — verify the `product_slug` path parameter is correctly formed. |
+| `429` | Rate limit exceeded. Slow down your request rate and retry. |

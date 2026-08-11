@@ -1,0 +1,150 @@
+{
+  "projectType": "api-service",
+  "projectName": "Knock2",
+  "projectDescription": "Knock2 is a visitor identification platform that reveals which companies and contacts are visiting your website and provides lead scoring, enrichment, and real-time alerts via webhooks.",
+  "theme": "luma",
+  "primaryColor": "#6366F1",
+  "lightColor": "#818CF8",
+  "darkColor": "#4F46E5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/accounts",
+              "concepts/contacts",
+              "concepts/lead-scores",
+              "concepts/filter-sets"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/tracking-script",
+              "guides/webhooks",
+              "guides/enrichment",
+              "guides/filtering",
+              "guides/pagination"
+            ]
+          },
+          {
+            "group": "Multi-Tenant",
+            "pages": [
+              "tenants/overview",
+              "tenants/managing-tenants"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/overview"
+            ]
+          },
+          {
+            "group": "Accounts",
+            "pages": [
+              "api-reference/accounts/list-accounts",
+              "api-reference/accounts/get-account"
+            ]
+          },
+          {
+            "group": "Contacts",
+            "pages": [
+              "api-reference/contacts/list-contacts",
+              "api-reference/contacts/get-contact"
+            ]
+          },
+          {
+            "group": "Activity & Scores",
+            "pages": [
+              "api-reference/activity/list-activity",
+              "api-reference/scores/get-scores",
+              "api-reference/scores/recent-scores"
+            ]
+          },
+          {
+            "group": "Filter Sets",
+            "pages": [
+              "api-reference/filter-sets/list-filter-sets",
+              "api-reference/filter-sets/create-filter-set",
+              "api-reference/filter-sets/update-filter-set",
+              "api-reference/filter-sets/delete-filter-set"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks/create-webhook",
+              "api-reference/webhooks/list-webhooks",
+              "api-reference/webhooks/delete-webhook"
+            ]
+          },
+          {
+            "group": "Enrichment & Auth",
+            "pages": [
+              "api-reference/enrich/enrich-contact",
+              "api-reference/auth/verify-key"
+            ]
+          },
+          {
+            "group": "Tenants & Script",
+            "pages": [
+              "api-reference/tenants/create-tenant",
+              "api-reference/tenants/delete-tenant",
+              "api-reference/script/get-script",
+              "api-reference/script/script-status"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Website visitor identification — reveal which companies and individuals visit your site",
+    "Lead scoring — auto-scored accounts and contacts based on ICP fit and engagement",
+    "Contact enrichment — waterfall enrichment from email or LinkedIn URL",
+    "Filter sets — save and reuse rich filter queries across accounts and contacts",
+    "Real-time webhooks — get notified on account identified, contact identified, score changed, and play triggered events",
+    "Activity feed — full page-visit history per account or contact",
+    "Multi-tenant provisioning — create and manage sub-tenants via API",
+    "Tracking script — simple `<script>` tag embed for visitor identification"
+  ],
+  "publicApiSurface": [
+    "GET /v1/accounts — list identified accounts",
+    "GET /v1/accounts/{account_id} — get account by ID or domain",
+    "GET /v1/contacts — list identified contacts",
+    "GET /v1/contacts/{contact_id} — get contact by ID",
+    "GET /v1/activity — list page-visit activity for an account or contact",
+    "GET /v1/scores — get lead scores for an account or contact",
+    "GET /v1/scores/recent — list recent score changes across the tenant",
+    "GET /v1/filter-sets — list saved filter sets",
+    "POST /v1/filter-sets — create a filter set",
+    "PUT /v1/filter-sets/{filter_set_id} — update a filter set",
+    "DELETE /v1/filter-sets/{filter_set_id} — delete a filter set",
+    "POST /v1/webhooks — create a webhook subscription",
+    "GET /v1/webhooks — list webhook subscriptions",
+    "DELETE /v1/webhooks/{webhook_id} — delete a webhook subscription",
+    "POST /v1/enrich — enrich a contact by email",
+    "POST /v1/tenants — provision a new tenant",
+    "DELETE /v1/tenants/{product_slug} — deactivate a tenant",
+    "GET /v1/script — get tracking script embed code",
+    "GET /v1/script/status — check tracking script installation status",
+    "GET /v1/me — verify API key"
+  ]
+}

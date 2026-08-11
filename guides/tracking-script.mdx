@@ -1,0 +1,172 @@
+---
+title: "Install the Knock2 Tracking Script on Your Website"
+sidebarTitle: "Tracking Script"
+description: "Embed the Knock2 sidekick.js tracking script on your website to automatically identify visiting companies and contacts in real time."
+---
+
+The Knock2 tracking script is the foundation of your visitor identification pipeline. Once embedded in your site's `<head>`, it silently captures session data for every visitor and sends it to Knock2's identification engine — no personally identifiable information is collected on the client side, and the script never blocks your page from loading.
+
+## Get the Embed Snippet
+
+Fetch your personalized embed snippet from the API. The response includes a `script_url` and a ready-to-paste `embed_html` tag pre-configured with your tenant slug.
+
+```bash
+curl https://api.knock2.ai/v1/script \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```json
+{
+  "data": {
+    "product_slug": "your_tenant",
+    "script_url": "https://api.knock2.ai/install/your_tenant/prod",
+    "embed_html": "<script src=\"https://api.knock2.ai/install/your_tenant/prod\" async></script>"
+  }
+}
+```
+
+Copy the `embed_html` value exactly as returned. The script is served directly from Knock2's API (not a separate CDN domain) — the tenant slug is resolved server-side from your API key and baked into the URL path, so there's no `data-slug` attribute to configure.
+
+## Add the Script to Your Site
+
+<Steps>
+  <Step title="Copy the embed HTML">
+    Copy the full value of `embed_html` from the API response above. It looks like:
+
+    ```html
+    <script src="https://api.knock2.ai/install/your_tenant/prod" async></script>
+    ```
+  </Step>
+  <Step title="Paste it inside your site's <head> tag">
+    Place the snippet before the closing `</head>` tag on every page you want to track. A typical HTML document looks like this:
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Your Site</title>
+    
+        <!-- Knock2 tracking script -->
+        <script src="https://api.knock2.ai/install/your_tenant/prod" async></script>
+      </head>
+      <body>
+        <!-- your content -->
+      </body>
+    </html>
+    ```
+  </Step>
+  <Step title="Deploy your site">
+    Publish the change through your normal deployment process. The script will begin collecting visitor data as soon as the updated page is live and receives its first non-localhost visit.
+  </Step>
+</Steps>
+
+## Verify Installation
+
+Once your site is live, confirm that Knock2 is receiving data by calling the script status endpoint.
+
+```bash
+curl https://api.knock2.ai/v1/script/status \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```json
+{
+  "data": {
+    "is_installed": true,
+    "visitor_count_last_7_days": 42,
+    "last_visit_at": "2024-06-01T14:23:00Z"
+  }
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `is_installed` | `true` when at least one unique non-localhost visitor has been recorded in the last 7 days |
+| `visitor_count_last_7_days` | Total unique visitor IPs recorded in the current 7-day window |
+| `last_visit_at` | ISO 8601 timestamp of the most recent visitor session |
+
+If `is_installed` is `false` after deploying, double-check that the snippet is present in the rendered HTML of your live site (use your browser's View Source or DevTools Network tab to confirm the request to your `/install/{your_tenant}/prod` script URL loads).
+
+## Framework-Specific Tips
+
+<AccordionGroup>
+  <Accordion title="Next.js">
+    **Pages Router (`_document.js`)**
+
+    Add the script tag inside the `<Head>` component in `pages/_document.js`:
+
+    ```jsx
+    import { Html, Head, Main, NextScript } from 'next/document';
+    
+    export default function Document() {
+      return (
+        <Html>
+          <Head>
+            <script
+              src="https://api.knock2.ai/install/your_tenant/prod"
+              async
+            />
+          </Head>
+          <body>
+            <Main />
+            <NextScript />
+          </body>
+        </Html>
+      );
+    }
+    ```
+
+    **App Router (`app/layout.tsx`)**
+
+    Use the Next.js `<Script>` component with `strategy="afterInteractive"` inside your root layout:
+
+    ```tsx
+    import Script from 'next/script';
+    
+    export default function RootLayout({ children }: { children: React.ReactNode }) {
+      return (
+        <html lang="en">
+          <head />
+          <body>
+            {children}
+            <Script
+              src="https://api.knock2.ai/install/your_tenant/prod"
+              strategy="afterInteractive"
+            />
+          </body>
+        </html>
+      );
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="WordPress">
+    **Option 1 — Header plugin**
+
+    Install a plugin such as _Insert Headers and Footers_ or _WPCode_, paste your `embed_html` snippet into the **Header** section, and save. The plugin injects the tag site-wide without touching theme files.
+
+    **Option 2 — Theme Customizer**
+
+    Go to **Appearance → Customize → Additional CSS / Custom Scripts** (exact label varies by theme). Some themes expose a **Custom Header Code** field — paste the snippet there. If your theme doesn't support this natively, use the plugin approach instead to avoid losing the tag on theme updates.
+  </Accordion>
+
+  <Accordion title="Webflow">
+    1. Open your Webflow project and go to **Site Settings → Custom Code**.
+    2. Paste your `embed_html` snippet into the **Head Code** text area.
+    3. Click **Save Changes**, then publish your site.
+
+    The script will load on every page of your published Webflow site. If you only want to track specific pages, use Webflow's per-page **Custom Code** section (available on paid plans) under **Page Settings → Custom Code → Head Code**.
+  </Accordion>
+
+  <Accordion title="Single Page Apps (React, Vue, Angular, etc.)">
+    Add the snippet once to the `index.html` file that serves as your app's shell — typically `public/index.html` for Create React App / Vite projects. The tracking script listens for browser `popstate` and `hashchange` events and intercepts `history.pushState` calls, so it automatically tracks navigation between client-side routes without any additional configuration.
+
+    You do **not** need to call any JavaScript function on each route change — the script handles this transparently.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  The script is loaded with the `async` attribute and has no impact on page load performance. It will never block rendering or delay your site's `DOMContentLoaded` event.
+</Note>

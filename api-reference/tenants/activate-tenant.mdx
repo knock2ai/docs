@@ -1,0 +1,62 @@
+---
+title: "POST /v1/tenants/{product_slug}/activate — Reactivate a Tenant"
+sidebarTitle: "Reactivate Tenant"
+description: "POST /v1/tenants/{product_slug}/activate reverses a prior deactivation — the only self-service path back for a domain whose tenant was previously deactivated. Requires tenants:write."
+---
+
+`POST /v1/tenants/{product_slug}/activate` reactivates a tenant previously deactivated via `DELETE /v1/tenants/{product_slug}` — the mirror of that operation. Only a direct child of the calling key can be reactivated, and only while it's currently deactivated.
+
+## Endpoint
+
+```text
+POST https://api.knock2.ai/v1/tenants/{product_slug}/activate
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  The direct child tenant's slug. Must currently be deactivated.
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X POST https://api.knock2.ai/v1/tenants/acme_com_yourco_com/activate \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+## Why this exists
+
+Because `product_slug` is deterministically derived from `domain` (KNO-1546), `POST /v1/tenants` permanently `409`s for a domain that already has a tenant record — even a deactivated one. This endpoint is therefore the **only** self-service way back for that domain; there is no way to provision a brand-new tenant in its place.
+
+Reactivation sets `is_product_slug_active = TRUE`, restores the tenant's Visual Visitor plan, and re-enables the tracking script and visitor identification. The tenant's original API key was never revoked, so it resumes working immediately with no re-issuing step.
+
+## Response
+
+Returns the reactivated tenant, same shape as [Get Tenant](/api-reference/tenants/get-tenant):
+
+```json
+{
+  "data": {
+    "product_slug": "acme_com_yourco_com",
+    "name": "Acme Corp",
+    "domain": "acme.com",
+    "is_active": true,
+    "billing_mode": "parent",
+    "limits": []
+  }
+}
+```
+
+## Required Scope
+
+Requires `tenants:write`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:write` scope. |
+| `404` | Tenant not found, not owned by your key, or already active — these are not distinguished in the response. |
+| `429` | Rate limit exceeded. |

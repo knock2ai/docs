@@ -1,0 +1,220 @@
+---
+title: "Filter Sets: Save and Reuse Visitor Queries in Knock2"
+sidebarTitle: "Filter Sets"
+description: "Filter sets let you save complex filter criteria and apply them by ID when querying accounts or contacts, avoiding repetitive JSON in every request."
+---
+
+Filter sets are named, reusable query definitions that you create once and reference by ID across your API calls. Instead of constructing and passing the same filter JSON on every request to `GET /v1/accounts` or `GET /v1/contacts`, you save the filter criteria once, get back a stable ID, and use that ID wherever you need the query. This makes your integration code cleaner, your filter logic centralizable, and your queries easier to audit and update.
+
+## What are filter sets?
+
+A filter set is a saved collection of one or more filter conditions, each targeting a specific field on an account or contact record. When you pass a `filter_set_id` to a list endpoint, Knock2 evaluates the saved conditions server-side and returns only the records that match — as if you had passed the full filter JSON inline.
+
+<Info>
+  Updating a filter set's conditions takes effect immediately across all API calls that reference its ID — you don't need to update your integration code when your targeting criteria evolve.
+</Info>
+
+Because filter sets live in Knock2's backend, they're also accessible to other Knock2 features — including segment-based alerting and dashboard views — so the same targeting logic you define for API queries can power your broader workflow.
+
+## Filter set types
+
+Every filter set targets either `account` or `contact` records. You specify the `type` field when creating the filter set:
+
+| Type | Applies to |
+| --- | --- |
+| `account` | [Account](/concepts/accounts) records — company-level visitors |
+| `contact` | [Contact](/concepts/contacts) records — individual-level visitors |
+
+Passing a contact-type filter set to `GET /v1/accounts` (or vice versa) returns a validation error.
+
+## Filter structure
+
+Each object in the `filters` array describes a single condition. All three core fields are required:
+
+<ResponseField name="key" type="string" required>
+  The name of the field to filter on (e.g. `"industry"`, `"estimated_employee_count"`, `"last_funding_round_type"`). Must be a valid field for the filter set's `type`.
+</ResponseField>
+
+<ResponseField name="keyType" type="string" required>
+  Declares the data type and matching behavior for this field. Must be one of:
+
+  | keyType | Use for |
+  | --- | --- |
+  | `boolean` | True/false fields |
+  | `date_range` | Date fields with before/after/between conditions |
+  | `employee_range` | Headcount band fields |
+  | `existence` | Checking whether a field is present or absent (no `value` required) |
+  | `nullable_boolean_arr` | Array fields that may contain boolean-like values |
+  | `number` | Numeric fields with comparison operators |
+  | `number_with_id` | Numeric fields that are paired with an identifier |
+  | `revenue_range` | Revenue band fields |
+  | `string` | Exact string match fields |
+  | `string_arr` | Array-of-strings fields (e.g. tags, departments) |
+  | `string_pattern` | String fields supporting wildcard or regex patterns |
+  | `string_searchable` | Full-text searchable string fields |
+  | `string_with_id` | String fields paired with an identifier (e.g. CRM stage \+ ID) |
+</ResponseField>
+
+<ResponseField name="condition" type="string" required>
+  The comparison operator to apply. Valid conditions depend on the `keyType`. For example, `string` supports `is`, `is_not`, `contains`, `does_not_contain`, `starts_with`, `ends_with`, `exists`, `does_not_exist`; `number`/`number_with_id` support `is`, `is_not`, `gt`, `gte`, `lt`, `lte`; `existence` supports `exists`, `does_not_exist`. See the [Filtering guide](/guides/filtering) for the complete matrix.
+</ResponseField>
+
+<ResponseField name="value" type="any">
+  The value to compare against. The shape depends on the `keyType` and `condition`. Not required for `existence` conditions. For `date_range`, pass an object with `start` and/or `end` ISO 8601 strings. For `string_arr`, pass an array of strings.
+</ResponseField>
+
+## Creating a filter set
+
+Send a `POST` request to `/v1/filter-sets` with a `name`, `type`, and `filters` array:
+
+```bash
+curl -X POST "https://api.knock2.ai/v1/filter-sets" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Series B SaaS companies",
+    "type": "account",
+    "filters": [
+      {
+        "key": "industry",
+        "keyType": "string_arr",
+        "condition": "is_one_of",
+        "value": ["Software"]
+      },
+      {
+        "key": "last_funding_round_type",
+        "keyType": "string",
+        "condition": "is",
+        "value": "Series B"
+      }
+    ]
+  }'
+```
+
+A successful response returns the created filter set object, including its `id`:
+
+```json
+{
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Series B SaaS companies",
+    "type": "account"
+  }
+}
+```
+
+<Note>
+  The API's create/list/update responses only ever include `id`, `name`, and `type` — they do not echo back the `filters` array or a `locked` field, even for locked (system-managed) sets. See the note on locked filter sets below for how to work around this.
+</Note>
+
+## Listing filter sets
+
+Use `GET /v1/filter-sets` to retrieve all filter sets in your tenant, including any system-managed ones:
+
+```bash
+curl "https://api.knock2.ai/v1/filter-sets" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+The response returns an array of filter set objects. Each object includes only `id`, `name`, and `type` — the `filters` array and `locked` status are not included in any list/create/update response.
+
+## Updating a filter set
+
+Send a `PUT` request to `/v1/filter-sets/{filter_set_id}` to replace a filter set's name or conditions. You can update `name`, `filters`, or both. All changes take effect immediately for any API call that references the filter set's ID:
+
+```bash
+curl -X PUT "https://api.knock2.ai/v1/filter-sets/<filter_set_id>" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Series B & C SaaS companies",
+    "filters": [
+      {
+        "key": "industry",
+        "keyType": "string_arr",
+        "condition": "is_one_of",
+        "value": ["Software"]
+      },
+      {
+        "key": "last_funding_round_type",
+        "keyType": "string_arr",
+        "condition": "is_one_of",
+        "value": ["Series B", "Series C"]
+      }
+    ]
+  }'
+```
+
+A successful response returns the updated filter set object.
+
+<Warning>
+  You cannot update a filter set with `locked: true`. Attempting to do so returns a **403 Forbidden** response.
+</Warning>
+
+## Deleting a filter set
+
+Send a `DELETE` request to `/v1/filter-sets/{filter_set_id}` to permanently remove a filter set. Deleted filter sets cannot be recovered, and any API calls that reference the deleted ID will return a `404 Not Found` error:
+
+```bash
+curl -X DELETE "https://api.knock2.ai/v1/filter-sets/<filter_set_id>" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+A successful deletion returns a `204 No Content` response with no body.
+
+<Warning>
+  You cannot delete a filter set with `locked: true`. Attempting to do so returns a **403 Forbidden** response.
+</Warning>
+
+## Using a filter set
+
+Once you have a filter set ID, pass it as the `filter_set_id` query parameter on any supported list endpoint:
+
+```bash
+curl "https://api.knock2.ai/v1/accounts?filter_set_id=fs_01HX..." \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+You can combine `filter_set_id` with other query parameters like `cursor` and `limit` for pagination:
+
+```bash
+curl "https://api.knock2.ai/v1/accounts?filter_set_id=fs_01HX...&limit=50&cursor=cur_..." \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+The same pattern works for contacts:
+
+```bash
+curl "https://api.knock2.ai/v1/contacts?filter_set_id=fs_01HX..." \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## System-managed filter sets
+
+Some filter sets are created and managed by Knock2 itself. These system-managed sets are locked and represent built-in segments used by the Knock2 platform — such as default ICP tiers or product-defined visitor categories.
+
+<Warning>
+  You cannot modify or delete a system-managed filter set via the API. Attempting to update or delete a locked filter set returns a **403 Forbidden** response. Read access is unrestricted — you can retrieve and use locked filter sets normally.
+</Warning>
+
+There's currently no `locked` field in the API response to check ahead of time — the only way to discover that a filter set is locked is to attempt a `PUT`/`DELETE` and get the `403`.
+
+## Further reading
+
+<CardGroup cols={2}>
+  <Card title="Filtering Guide" icon="filter" href="/guides/filtering">
+    A full reference of available filter keys, keyTypes, and valid condition operators for both accounts and contacts.
+  </Card>
+
+  <Card title="Filter Sets API Reference" icon="code" href="/api-reference/filter-sets/create-filter-set">
+    Complete endpoint documentation for creating, listing, retrieving, updating, and deleting filter sets.
+  </Card>
+
+  <Card title="Accounts" icon="building" href="/concepts/accounts">
+    Understand all filterable fields available on account records.
+  </Card>
+
+  <Card title="Contacts" icon="user" href="/concepts/contacts">
+    Understand all filterable fields available on contact records.
+  </Card>
+</CardGroup>

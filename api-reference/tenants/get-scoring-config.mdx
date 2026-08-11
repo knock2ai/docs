@@ -1,0 +1,90 @@
+---
+title: "GET /v1/tenants/{product_slug}/scoring-config — Get a Tenant's Lead-Scoring Configuration"
+sidebarTitle: "Get Scoring Config"
+description: "GET /v1/tenants/{product_slug}/scoring-config returns a tenant's Company Profile, Buyer Persona, and scoring weight — the same fields set in the dashboard's ICP settings. Requires tenants:read."
+---
+
+`GET /v1/tenants/{product_slug}/scoring-config` returns the Company Profile and Buyer Persona configuration that drives lead scoring for a tenant — the same fields configurable in the Knock2 dashboard's ICP settings, now readable via the API. Use this to audit or migrate a child tenant's scoring setup, or to confirm a value set via [Update Scoring Config](/api-reference/tenants/update-scoring-config) or at creation time took effect.
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/tenants/{product_slug}/scoring-config
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  The tenant's slug — your own key's `product_slug`, or a direct child's.
+</ParamField>
+
+## Example Request
+
+```bash
+curl https://api.knock2.ai/v1/tenants/acme_com_yourco_com/scoring-config \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+## Response
+
+Returns `200 OK`. Persona fields are `null` if no Ideal Customer Profile (ICP) has been configured for this tenant yet — this is a normal state for a newly provisioned tenant, not an error.
+
+```json
+{
+  "data": {
+    "product_slug": "acme_com_yourco_com",
+    "name": "Acme Corp",
+    "category": "B2B SaaS",
+    "overview": "Acme Corp builds enterprise workflow automation tools.",
+    "linkedin_company_url": "https://www.linkedin.com/company/acme-corp",
+    "persona_description": "VP or Director of Engineering at a Series B+ SaaS company with 50-500 employees.",
+    "company_description": "B2B SaaS companies selling to mid-market and enterprise buyers.",
+    "persona_weight": 0.6
+  }
+}
+```
+
+<ResponseField name="data.product_slug" type="string">
+  The tenant's slug.
+</ResponseField>
+
+<ResponseField name="data.name" type="string | null">
+  The tenant's display name (Company Profile).
+</ResponseField>
+
+<ResponseField name="data.category" type="string | null">
+  A short category or industry label for the tenant's own business (Company Profile).
+</ResponseField>
+
+<ResponseField name="data.overview" type="string | null">
+  A plain-English description of the tenant's product or business, used to tune identification and scoring accuracy (Company Profile).
+</ResponseField>
+
+<ResponseField name="data.linkedin_company_url" type="string | null">
+  URL to the tenant's own LinkedIn company page (Company Profile).
+</ResponseField>
+
+<ResponseField name="data.persona_description" type="string | null">
+  A plain-English description of the tenant's ideal buyer persona (title, seniority, department) — the Buyer Persona used to score contacts.
+</ResponseField>
+
+<ResponseField name="data.company_description" type="string | null">
+  A plain-English description of the tenant's ideal customer company (industry, size, market) — the Buyer Persona used to score accounts.
+</ResponseField>
+
+<ResponseField name="data.persona_weight" type="number | null">
+  A value between `0` and `1` controlling how heavily the Buyer Persona (contact fit) is weighted against the ideal customer company when scoring, versus firmographic fit. Higher values weight persona fit more heavily. `null` if no ICP is configured yet.
+</ResponseField>
+
+## Required Scope
+
+Requires `tenants:read`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:read` scope. |
+| `404` | No tenant found with this `product_slug` under your account. |
+| `429` | Rate limit exceeded. |

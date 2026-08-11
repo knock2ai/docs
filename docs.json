@@ -1,0 +1,151 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "luma",
+  "name": "Knock2",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5"
+  },
+  "favicon": "https://icons.duckduckgo.com/ip3/api.knock2.ai.ico",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/accounts",
+              "concepts/contacts",
+              "concepts/lead-scores",
+              "concepts/filter-sets"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/tracking-script",
+              "guides/webhooks",
+              "guides/enrichment",
+              "guides/filtering",
+              "guides/pagination"
+            ]
+          },
+          {
+            "group": "Multi-Tenant",
+            "pages": [
+              "tenants/overview",
+              "tenants/managing-tenants"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/overview"
+            ]
+          },
+          {
+            "group": "Accounts",
+            "pages": [
+              "api-reference/accounts/list-accounts",
+              "api-reference/accounts/get-account"
+            ]
+          },
+          {
+            "group": "Contacts",
+            "pages": [
+              "api-reference/contacts/list-contacts",
+              "api-reference/contacts/get-contact"
+            ]
+          },
+          {
+            "group": "Activity & Scores",
+            "pages": [
+              "api-reference/activity/list-activity",
+              "api-reference/scores/get-scores",
+              "api-reference/scores/recent-scores"
+            ]
+          },
+          {
+            "group": "Filter Sets",
+            "pages": [
+              "api-reference/filter-sets/list-filter-sets",
+              "api-reference/filter-sets/create-filter-set",
+              "api-reference/filter-sets/update-filter-set",
+              "api-reference/filter-sets/delete-filter-set"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks/create-webhook",
+              "api-reference/webhooks/list-webhooks",
+              "api-reference/webhooks/delete-webhook",
+              "api-reference/webhooks/get-webhook-secret"
+            ]
+          },
+          {
+            "group": "Enrichment & Auth",
+            "pages": [
+              "api-reference/enrich/enrich-contact",
+              "api-reference/auth/verify-key"
+            ]
+          },
+          {
+            "group": "Tenants & Script",
+            "pages": [
+              "api-reference/tenants/create-tenant",
+              "api-reference/tenants/list-tenants",
+              "api-reference/tenants/get-tenant",
+              "api-reference/tenants/update-tenant",
+              "api-reference/tenants/get-scoring-config",
+              "api-reference/tenants/update-scoring-config",
+              "api-reference/tenants/activate-tenant",
+              "api-reference/tenants/delete-tenant",
+              "api-reference/tenants/get-tenant-limits",
+              "api-reference/tenants/put-tenant-limits",
+              "api-reference/tenants/delete-tenant-limits",
+              "api-reference/tenants/get-tenant-usage",
+              "api-reference/script/get-script",
+              "api-reference/script/script-status",
+              "api-reference/tenants/get-script-config",
+              "api-reference/tenants/update-script-config"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:support@knock2.ai"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://app.knock2.ai"
+    }
+  },
+  "footer": {
+    "socials": {
+      "linkedin": "https://linkedin.com/company/knock2"
+    }
+  }
+}

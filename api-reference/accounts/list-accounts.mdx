@@ -1,0 +1,377 @@
+---
+title: "GET /v1/accounts — List Identified Accounts"
+sidebarTitle: "List Accounts"
+description: "GET /v1/accounts returns a paginated list of identified company accounts. Supports filtering by domain, filter_set_id, or inline filter JSON."
+---
+
+The List Accounts endpoint returns a paginated list of every company account Knock2 has identified visiting your website. Each record includes firmographic data — company name, domain, industry, employee count, estimated revenue — alongside behavioral data such as the latest visited page and total browsing time. You can narrow results to a specific company by passing a `domain` parameter, apply a pre-built filter set with `filter_set_id`, or construct ad-hoc filter logic with the `filters` parameter.
+
+---
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/accounts
+```
+
+---
+
+## Required Scope
+
+Your API key must have the `accounts:read` scope (or the broader `all:read` scope) to call this endpoint.
+
+---
+
+## Request Parameters
+
+<ParamField query="limit" default={50} type="integer">
+  The maximum number of account records to return in a single response. Must be between `1` and `100`. Defaults to `50`.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  An opaque pagination cursor returned by a previous List Accounts response as `next_cursor`. Omit this parameter on your first request. Pass it on subsequent requests to retrieve the next page of results.
+</ParamField>
+
+<ParamField query="filters" type="string">
+  A URL-encoded JSON array of filter objects to apply to the results, each with `key`, `keyType`, `condition`, and (usually) `value` fields. Filters are combined with a logical AND. Can be combined with `filter_set_id` — see below.
+
+  Example (before URL encoding):
+
+  ```json
+  [{"key":"industry","keyType":"string_arr","condition":"is_one_of","value":["Software"]}]
+  ```
+</ParamField>
+
+<ParamField query="filter_set_id" type="string">
+  The ID of a saved filter set to apply. Filter sets are created and managed in the Knock2 dashboard or via the Filter Sets API.
+
+  `filters` and `filter_set_id` are **not** mutually exclusive — when both are provided, the saved filter set's conditions are used as the base and the inline `filters` are appended on top (all conditions must match).
+</ParamField>
+
+<ParamField query="domain" type="string">
+  Filter results to a single company by their exact domain (e.g. `acme.com`). Returns at most one record. Use this as a lightweight lookup shortcut instead of constructing a `filters` query.
+</ParamField>
+
+<ParamField query="product_slug" type="string">
+  Read a direct child tenant's accounts instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`. If you also pass `filter_set_id`, the filter set must belong to the tenant being read.
+</ParamField>
+
+---
+
+## Example Requests
+
+<CodeGroup>
+
+```bash Basic request
+curl https://api.knock2.ai/v1/accounts \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash Filter by domain
+curl "https://api.knock2.ai/v1/accounts?domain=acme.com" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash With pagination
+curl "https://api.knock2.ai/v1/accounts?limit=25&cursor=eyJpZCI6ImFjY18wMUhYIn0=" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash With inline filters
+curl "https://api.knock2.ai/v1/accounts?filters=%5B%7B%22key%22%3A%22industry%22%2C%22keyType%22%3A%22string_arr%22%2C%22condition%22%3A%22is_one_of%22%2C%22value%22%3A%5B%22Software%22%5D%7D%5D" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+---
+
+## Response
+
+Returns `200 OK` with a paginated list of account objects.
+
+```json Example response
+{
+  "data": [
+    {
+      "id": "acc_01HX...",
+      "name": "Acme Corp",
+      "domain": "acme.com",
+      "logo_url": "https://logo.clearbit.com/acme.com",
+      "linkedin_url": "https://www.linkedin.com/company/acme-corp",
+      "industry": "Software",
+      "sector": "Technology",
+      "description": "Acme Corp builds enterprise workflow automation tools.",
+      "estimated_employee_count": "51-200",
+      "estimated_annual_revenue": "10M-50M",
+      "address_city": "San Francisco",
+      "address_state": "CA",
+      "address_country": "US",
+      "location": "San Francisco, CA, US",
+      "latest_visit_page": "/pricing",
+      "latest_visit_datetime": "2024-06-01T14:23:00Z",
+      "page_visits": [
+        {
+          "page": "/pricing",
+          "start_time": "2024-06-01T14:20:00Z",
+          "end_time": "2024-06-01T14:23:45Z"
+        }
+      ],
+      "total_browsing_time_seconds": 342,
+      "is_from_enrichment": false,
+      "created_at": "2024-05-15T09:00:00Z"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "eyJpZCI6ImFjY18wMUhYIn0="
+}
+```
+
+### Response Fields
+
+<ResponseField name="data" type="array" required>
+  An array of account objects for the current page.
+
+  <Expandable title="Account object fields">
+    <ResponseField name="id" type="string">
+      The unique Knock2 identifier for this account.
+    </ResponseField>
+
+    <ResponseField name="name" type="string">
+      The company's display name (e.g. `"Acme Corp"`).
+    </ResponseField>
+
+    <ResponseField name="domain" type="string">
+      The company's primary web domain (e.g. `"acme.com"`).
+    </ResponseField>
+
+    <ResponseField name="logo_url" type="string">
+      URL to the company's logo image, if available.
+    </ResponseField>
+
+    <ResponseField name="linkedin_url" type="string">
+      URL to the company's LinkedIn profile page.
+    </ResponseField>
+
+    <ResponseField name="industry" type="string">
+      The company's industry classification (e.g. `"Software"`, `"Financial Services"`).
+    </ResponseField>
+
+    <ResponseField name="sector" type="string">
+      The broader sector the company belongs to (e.g. `"Technology"`, `"Healthcare"`).
+    </ResponseField>
+
+    <ResponseField name="description" type="string">
+      A short company description sourced from enrichment data.
+    </ResponseField>
+
+    <ResponseField name="estimated_employee_count" type="string">
+      A bucketed range representing the company's headcount (e.g. `"51-200"`, `"201-500"`).
+    </ResponseField>
+
+    <ResponseField name="estimated_annual_revenue" type="string">
+      A bucketed range representing the company's estimated annual revenue (e.g. `"10M-50M"`, `"50M-200M"`).
+    </ResponseField>
+
+    <ResponseField name="phone_numbers" type="array">
+      A list of phone numbers associated with the company.
+    </ResponseField>
+
+    <ResponseField name="tags" type="array">
+      A list of tags applied to this account in Knock2.
+    </ResponseField>
+
+    <ResponseField name="technology_tags" type="array">
+      A list of technologies detected in use at this company (e.g. `"Salesforce"`, `"HubSpot"`).
+    </ResponseField>
+
+    <ResponseField name="address_city" type="string">
+      The city where the company is located.
+    </ResponseField>
+
+    <ResponseField name="address_state" type="string">
+      The state or province where the company is located.
+    </ResponseField>
+
+    <ResponseField name="address_zip_code" type="string">
+      The postal or ZIP code for the company's address.
+    </ResponseField>
+
+    <ResponseField name="address_country" type="string">
+      The country where the company is located (ISO 3166-1 alpha-2 code, e.g. `"US"`).
+    </ResponseField>
+
+    <ResponseField name="location" type="string">
+      A human-readable location string combining city, state, and country.
+    </ResponseField>
+
+    <ResponseField name="last_funding_date" type="string">
+      ISO 8601 date of the company's most recent funding event, if available.
+    </ResponseField>
+
+    <ResponseField name="last_funding_round_type" type="string">
+      The type of the most recent funding round (e.g. `"Series A"`, `"Seed"`).
+    </ResponseField>
+
+    <ResponseField name="last_funding_amount" type="string">
+      The amount raised in the most recent funding round.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_source" type="string">
+      The lead source of the associated CRM deal, if synced.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_name" type="string">
+      The name of the associated CRM deal, if synced.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_stage" type="string">
+      The pipeline stage of the associated CRM deal (e.g. `"Proposal"`, `"Closed Won"`).
+    </ResponseField>
+
+    <ResponseField name="crm_deal_value_usd" type="number">
+      The monetary value of the associated CRM deal in USD.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_close_datetime" type="string">
+      ISO 8601 timestamp of the expected or actual close date for the associated CRM deal.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_owner_email" type="string">
+      Email address of the deal owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_owner_first_name" type="string">
+      First name of the deal owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_deal_owner_last_name" type="string">
+      Last name of the deal owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_company_owner_email" type="string">
+      Email address of the company owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_company_owner_first_name" type="string">
+      First name of the company owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="crm_company_owner_last_name" type="string">
+      Last name of the company owner in your CRM.
+    </ResponseField>
+
+    <ResponseField name="hubspot_company_id" type="string">
+      The corresponding HubSpot Company record ID, if synced.
+    </ResponseField>
+
+    <ResponseField name="salesforce_account_id" type="string">
+      The corresponding Salesforce Account record ID, if synced.
+    </ResponseField>
+
+    <ResponseField name="latest_visit_datetime" type="string">
+      ISO 8601 timestamp of the account's most recent visit.
+    </ResponseField>
+
+    <ResponseField name="latest_visit_page" type="string">
+      The URL path of the most recent page this account visited on your website (e.g. `"/pricing"`).
+    </ResponseField>
+
+    <ResponseField name="page_visits" type="array">
+      The account's most recent page visits (up to 20 per account in the list response), newest first. Each entry has `page` (string), `start_time` (ISO 8601), and `end_time` (ISO 8601, `null` if the visit is still open). Call [Get Account](/api-reference/accounts/get-account) for the full (up to 100) history.
+    </ResponseField>
+
+    <ResponseField name="total_browsing_time_seconds" type="integer">
+      The total cumulative time in seconds this account has spent on your website across all sessions.
+    </ResponseField>
+
+    <ResponseField name="utms" type="object">
+      A map of all UTM parameters captured from this account's visits.
+    </ResponseField>
+
+    <ResponseField name="document_referrer" type="string">
+      The referrer URL from the account's most recent visit.
+    </ResponseField>
+
+    <ResponseField name="utm_source" type="string">
+      The `utm_source` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="utm_medium" type="string">
+      The `utm_medium` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="utm_campaign" type="string">
+      The `utm_campaign` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="utm_term" type="string">
+      The `utm_term` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="utm_content" type="string">
+      The `utm_content` value from the most recent tracked visit.
+    </ResponseField>
+
+    <ResponseField name="is_from_enrichment" type="boolean">
+      `true` if this account record was created via enrichment rather than a live website visit.
+    </ResponseField>
+
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp of when this account was first identified by Knock2.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="has_more" type="boolean" required>
+  `true` if there are additional pages of results after this one. Pass `next_cursor` as the `cursor` parameter in your next request to retrieve them.
+</ResponseField>
+
+<ResponseField name="next_cursor" type="string | null" required>
+  An opaque string you pass as the `cursor` parameter in your next request to retrieve the next page. `null` when `has_more` is `false` and you have reached the last page.
+</ResponseField>
+
+---
+
+## Error Responses
+
+| HTTP Status | `code` | Description |
+| --- | --- | --- |
+| `401` | `unauthorized` | Your API key is missing or invalid. |
+| `403` | `forbidden` | Your API key does not have the `accounts:read` scope. |
+| `422` | `invalid_request` | One or more query parameters failed validation. |
+| `429` | `rate_limit_exceeded` | You have exceeded the rate limit. Apply exponential backoff and retry. |
+
+```json 401 Unauthorized
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "Invalid or missing API key.",
+    "details": null
+  }
+}
+```
+
+```json 422 Invalid Request
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "Missing required fields: limit",
+    "details": null
+  }
+}
+```
+
+```json 429 Rate limit exceeded
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Too many requests. Please slow down and retry with exponential backoff.",
+    "details": null
+  }
+}
+```

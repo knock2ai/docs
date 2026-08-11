@@ -1,0 +1,156 @@
+---
+title: "List Page Visit Activity for Accounts and Contacts"
+sidebarTitle: "List Activity"
+description: "GET /v1/activity returns page visit events for an account or contact. Requires account_id or contact_id. Supports cursor-based pagination."
+---
+
+The activity endpoint returns page-visit history — every page browsed, when the visit started and ended. Scope it to a specific account or contact with `account_id`/`contact_id`, or omit both to get a single tenant-wide feed across every account and contact, newest first. Use it to understand engagement patterns, build timelines in your CRM, or trigger workflows based on high-intent page visits.
+
+<Tip>
+  Polling many individual contacts for activity in a loop (N\+1) is expensive and slow. If you're doing that today, switch to the tenant-wide feed instead (omit `account_id`/`contact_id`). `next_cursor` walks backward through history — it is not a since-cursor — so to poll for new activity, call with no cursor on each poll and compare the returned `created_at` values against the newest one you've already processed (a client-side high-water mark), rather than passing `next_cursor` back in.
+</Tip>
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/activity
+```
+
+## Required Scope
+
+Your API key must have the `activity:read` scope (or the broader `all:read` scope) to call this endpoint.
+
+## Parameters
+
+<ParamField query="account_id" type="string">
+  The ID of the account whose page visits you want to retrieve. Returns company-level page visits when provided without `contact_id`. Omit both `account_id` and `contact_id` to get the tenant-wide feed instead (see below).
+</ParamField>
+
+<ParamField query="contact_id" type="string">
+  The ID of the contact whose page visits you want to retrieve. Returns person-level page visits. If combined with `account_id`, contact-level activity is returned. Omit both `account_id` and `contact_id` to get the tenant-wide feed instead (see below).
+</ParamField>
+
+<ParamField query="limit" default="50" type="integer">
+  The number of activity records to return per page. Accepts values between `1` and `100`.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  A pagination cursor returned in a previous response as `next_cursor`. Pass this value to retrieve the next page of results.
+</ParamField>
+
+<ParamField query="product_slug" type="string">
+  Read a direct child tenant's activity instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`.
+</ParamField>
+
+## Tenant-Wide Feed
+
+Omit both `account_id` and `contact_id` to receive a single feed merging every account's and contact's page visits for the tenant, ordered newest first. This is the recommended way to stay in sync with activity across your whole tenant instead of polling individual contacts.
+
+`next_cursor` walks backward through history on every branch of this endpoint, including the tenant-wide feed — each page you fetch with it is strictly older than the last, the same as paging back through a list. It is **not** a since-cursor. To poll this feed for new activity on an interval, call it with no `cursor` on each poll and compare the returned `created_at` values against the newest one you've already processed client-side, rather than feeding `next_cursor` back in.
+
+The tenant-wide feed automatically excludes activity for accounts and contacts that have been identified but not yet revealed (locked), or soft-deleted — the same visibility rules that apply when reading those records directly.
+
+## Example Requests
+
+<CodeGroup>
+
+```bash Scoped to an account
+curl "https://api.knock2.ai/v1/activity?account_id=<account_id>" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash Tenant-wide feed
+curl "https://api.knock2.ai/v1/activity?limit=100" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash Tenant-wide feed, next page of history
+curl "https://api.knock2.ai/v1/activity?cursor=<next_cursor_from_last_call>" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+## Response
+
+Returns an `ActivityListResponse` object containing an array of page-visit events.
+
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "account_page_visit",
+      "page": "/pricing",
+      "start_time": "2024-06-01T14:20:00Z",
+      "end_time": "2024-06-01T14:23:45Z",
+      "created_at": "2024-06-01T14:23:45Z",
+      "account_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}
+```
+
+### Response Fields
+
+<ResponseField name="data" type="array">
+  An array of page-visit event objects.
+
+  <Expandable title="data[n] fields">
+    <ResponseField name="id" type="string">
+      A unique identifier for the page-visit event.
+    </ResponseField>
+
+    <ResponseField name="type" type="string">
+      The type of visit event. One of `account_page_visit` (visit attributed to a company) or `contact_page_visit` (visit attributed to an individual contact).
+    </ResponseField>
+
+    <ResponseField name="page" type="string | null">
+      The path of the page that was visited (e.g. `/pricing`).
+    </ResponseField>
+
+    <ResponseField name="start_time" type="string | null">
+      ISO 8601 timestamp marking when the visitor arrived on the page.
+    </ResponseField>
+
+    <ResponseField name="end_time" type="string | null">
+      ISO 8601 timestamp marking when the visitor left the page.
+    </ResponseField>
+
+    <ResponseField name="created_at" type="string | null">
+      ISO 8601 timestamp marking when this event record was created.
+    </ResponseField>
+
+    <ResponseField name="account_id" type="string">
+      Present only on `account_page_visit` events (i.e. when the request was scoped by `account_id`).
+    </ResponseField>
+
+    <ResponseField name="contact_id" type="string">
+      Present only on `contact_page_visit` events (i.e. when the request was scoped by `contact_id`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="has_more" type="boolean">
+  `true` if additional pages of results are available. Pass `next_cursor` in your next request to retrieve them.
+</ResponseField>
+
+<ResponseField name="next_cursor" type="string | null">
+  A cursor string to retrieve the next page of results. `null` when there are no further pages.
+</ResponseField>
+
+## Error Responses
+
+| Status | Description |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `activity:read` scope. |
+| `404` | The specified `account_id` or `contact_id` was not found. Not applicable to the tenant-wide feed (no `account_id`/`contact_id` supplied), which returns an empty `data` array instead if the tenant has no activity yet. |
+| `422` | The request is well-formed but contains semantic errors (e.g. an unprocessable parameter value). |
+| `429` | Rate limit exceeded. Back off and retry. |

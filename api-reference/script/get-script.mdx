@@ -1,0 +1,87 @@
+---
+title: "GET /v1/script — Retrieve Your Tracking Script"
+sidebarTitle: "Get Script"
+description: "GET /v1/script returns the tracking script URL and a ready-to-embed HTML snippet for your Knock2 tenant. Paste it into your site's head tag."
+---
+
+`GET /v1/script` returns everything you need to install the Knock2 tracking script on your site. The script is served directly from Knock2's own API (not a separate CDN) — the response includes the script URL and a pre-built `<script>` tag with your tenant slug already baked into the path, so you can paste it directly into your site's `<head>` without any manual configuration.
+
+<Note>
+  You can call this with the **per-tenant API key** returned by `POST /v1/tenants`, or with your **parent** API key plus `X-Knock-Tenant` (or `?product_slug=`) to fetch a direct child's script without switching keys — see [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</Note>
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/script
+```
+
+## Request Parameters
+
+<ParamField query="product_slug" type="string">
+  Read a direct child tenant's script instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied.
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`.
+</ParamField>
+
+## Example Requests
+
+<CodeGroup>
+
+```bash Using the tenant's own key
+curl https://api.knock2.ai/v1/script \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash Using a parent key for a child tenant
+curl https://api.knock2.ai/v1/script \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "X-Knock-Tenant: acme_com_yourco_com"
+```
+
+</CodeGroup>
+
+## Response
+
+A successful request returns `200 OK` with a `ScriptResponse` body.
+
+```json
+{
+  "data": {
+    "product_slug": "your_tenant",
+    "script_url": "https://api.knock2.ai/install/your_tenant/prod",
+    "embed_html": "<script src=\"https://api.knock2.ai/install/your_tenant/prod\" async></script>"
+  }
+}
+```
+
+<ResponseField name="data.script_url" type="string">
+  The full tracking script URL for this tenant, served from Knock2's API. Use this if you are loading the script programmatically or through a tag manager.
+</ResponseField>
+
+<ResponseField name="data.embed_html" type="string">
+  A ready-to-paste `<script>` tag with your tenant's script URL already filled in. Copy this value and add it to the `<head>` of every page you want to track. No further configuration is required.
+</ResponseField>
+
+## Installing the Script
+
+Take the `embed_html` value from the response and add it to the `<head>` section of your site:
+
+```html
+<head>
+  <!-- other head tags -->
+  <script src="https://api.knock2.ai/install/your_tenant/prod" async></script>
+</head>
+```
+
+Place the tag on every page you want Knock2 to track. After installation, verify the script is firing correctly with [GET /v1/script/status](/api-reference/script/script-status).
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `422` | Request could not be processed — verify your request is well-formed. |
+| `429` | Rate limit exceeded. Slow down your request rate and retry. |

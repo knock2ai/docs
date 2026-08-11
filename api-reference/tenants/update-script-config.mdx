@@ -1,0 +1,69 @@
+---
+title: "PATCH /v1/tenants/{product_slug}/script-config — Update a Tenant's Tracking-Script Exclusion Configuration"
+sidebarTitle: "Update Script Config"
+description: "PATCH /v1/tenants/{product_slug}/script-config sets pages_to_ignore for your own tenant or a direct child tenant. Requires tenants:write."
+---
+
+`PATCH /v1/tenants/{product_slug}/script-config` sets `pages_to_ignore` — the URL path patterns on which the tracking script does not run at all — for your own tenant or a direct child tenant. Before this endpoint, this could only be set by hand in the dashboard's Script Settings page. Call this right after [Create Tenant](/api-reference/tenants/create-tenant) — or pass the same field as `script_config` on the create call itself — to exclude known non-prospect paths (an internal admin subpath, a tenant portal, a careers page) from the very first pageview.
+
+Only `pages_to_ignore` is written by this endpoint; omit it and nothing changes.
+
+## Endpoint
+
+```text
+PATCH https://api.knock2.ai/v1/tenants/{product_slug}/script-config
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  Your own tenant's slug, or a direct child tenant's slug.
+</ParamField>
+
+## Request Body
+
+<ParamField body="pages_to_ignore" type="string[]">
+  Regex patterns matched against `window.location.pathname` in the browser. A visitor's page fully skips the tracking script — no session, no identification, no credits spent — if it matches any pattern in this list. Replaces the tenant's entire list; this is not additive.
+</ParamField>
+
+<Note>
+  Every pattern is validated with a regex compile check before being saved. A pattern that fails to compile returns `400` rather than being written and silently breaking the tracking script for every visitor on the tenant's site. Because the tracking script runs in the browser, the check only catches common breakages (unbalanced brackets or parentheses) and doesn't guarantee the pattern behaves exactly as intended once evaluated by the browser's regex engine — test patterns carefully before relying on them in production.
+</Note>
+
+## Example Request
+
+```bash
+curl -X PATCH https://api.knock2.ai/v1/tenants/acme_com_yourco_com/script-config \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pages_to_ignore": ["^/careers", "^/privacy-policy"]
+  }'
+```
+
+## Response
+
+Returns the tenant's script configuration after the update, same shape as [Get Script Config](/api-reference/tenants/get-script-config):
+
+```json
+{
+  "data": {
+    "product_slug": "acme_com_yourco_com",
+    "pages_to_ignore": ["^/careers", "^/privacy-policy"]
+  }
+}
+```
+
+## Required Scope
+
+Requires `tenants:write`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `400` | One or more `pages_to_ignore` patterns failed to compile as a regex. |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:write` scope. |
+| `404` | No tenant found with this `product_slug` as your own account or a direct child of it. |
+| `429` | Rate limit exceeded. |

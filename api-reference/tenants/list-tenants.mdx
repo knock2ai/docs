@@ -1,0 +1,85 @@
+---
+title: "GET /v1/tenants — List Your Child Tenants"
+sidebarTitle: "List Tenants"
+description: "GET /v1/tenants lists your direct child tenants with their current credit allocations and usage. Requires the tenants:read scope."
+---
+
+`GET /v1/tenants` lists the calling key's direct child tenants, each with its current allocation set and per-limit usage/remaining. Use this to build a partner-facing dashboard of your provisioned workspaces without querying each tenant individually.
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/tenants
+```
+
+## Query Parameters
+
+<ParamField query="limit" default="50" type="integer">
+  Number of tenants to return. Minimum 1, maximum 100.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Opaque cursor from a previous response's `next_cursor`. Omit on the first request.
+</ParamField>
+
+## Example Request
+
+```bash
+curl https://api.knock2.ai/v1/tenants \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": [
+    {
+      "product_slug": "acme_com_yourco_com",
+      "name": "Acme Corp",
+      "domain": "acme.com",
+      "is_active": true,
+      "billing_mode": "parent",
+      "limits": [
+        {
+          "type": "credits",
+          "value": 100,
+          "period": "lifetime",
+          "is_enforced": true,
+          "equivalent_credits": 100,
+          "used": 4,
+          "remaining": 96
+        }
+      ]
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false,
+  "allocated_total_credits": 100,
+  "plan_credits": 5000
+}
+```
+
+<ResponseField name="data[].limits" type="array">
+  Every allocation currently set on this tenant, each with `used`/`remaining` for its window. Empty when the tenant has no allocation (unlimited within your own pool).
+</ResponseField>
+
+<ResponseField name="allocated_total_credits" type="number">
+  The sum of every child's `credits`-type allocation across all your children (not just this page), counting only allocations with `is_enforced: true` — a non-enforced allocation, or a `contacts`/`accounts`-type allocation, isn't included here; read those from each tenant's own `limits`.
+</ResponseField>
+
+<ResponseField name="plan_credits" type="number | null">
+  Your own plan's credit limit, so you can compare against `allocated_total_credits` and see your overbooking ratio. Over-allocating across children is allowed by design.
+</ResponseField>
+
+## Required Scope
+
+Requires `tenants:read`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:read` scope. |
+| `429` | Rate limit exceeded. |

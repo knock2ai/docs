@@ -1,0 +1,103 @@
+---
+title: "Create a New Account or Contact Filter Set — Knock2"
+sidebarTitle: "Create Filter Set"
+description: "POST /v1/filter-sets creates a new named filter set for accounts or contacts. Returns the created filter set with its id for use in list queries."
+---
+
+Use this endpoint to programmatically define a new segment of accounts or contacts based on any combination of firmographic, behavioral, or demographic criteria. Once created, you can reference the returned `id` anywhere the API accepts a `filter_set_id`.
+
+## Endpoint
+
+```text
+POST https://api.knock2.ai/v1/filter-sets
+```
+
+## Required Scope
+
+Your API key must have the `filter_sets:write` scope (or the broader `all:write` scope) to call this endpoint.
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  A human-readable label for the filter set (e.g. `"Series B SaaS companies"`). This name appears in the Knock2 dashboard and in list responses.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Specifies whether the filter set targets `"account"` or `"contact"` records. This value cannot be changed after creation.
+</ParamField>
+
+<ParamField body="filters" type="array" required>
+  An array of filter rule objects that define the segment criteria. All rules in the array are applied as AND conditions — a record must satisfy every rule to match.
+
+  <Expandable title="filters[n] fields">
+    <ParamField body="key" type="string" required>
+      The attribute name to filter on (e.g. `"industry"`, `"last_funding_round_type"`, `"employee_count"`).
+    </ParamField>
+
+    <ParamField body="keyType" type="string" required>
+      The data type of the attribute. Accepted values: `"boolean"`, `"date_range"`, `"employee_range"`, `"existence"`, `"nullable_boolean_arr"`, `"number"`, `"number_with_id"`, `"revenue_range"`, `"string"`, `"string_arr"`, `"string_pattern"`, `"string_searchable"`, `"string_with_id"`.
+    </ParamField>
+
+    <ParamField body="condition" type="string" required>
+      The comparison operator to apply. Valid operators depend on the `keyType` chosen. Full set: `is`, `is_not`, `contains`, `does_not_contain`, `starts_with`, `ends_with`, `exists`, `does_not_exist`, `exclude_personal_emails` (string types); `is_one_of`, `is_not_in` (array/bucket types); `gt`, `gte`, `lt`, `lte` (number types); `before`, `after`, `between` (date\_range). See the [Filtering guide](/guides/filtering) for the full matrix of which conditions apply to which `keyType`.
+    </ParamField>
+
+    <ParamField body="value" type="string | number | boolean">
+      The value to compare against. Not required for `existence` conditions (e.g. `"exists"`, `"not_exists"`); required for all other condition types.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X POST https://api.knock2.ai/v1/filter-sets \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Series B SaaS companies",
+    "type": "account",
+    "filters": [
+      {"key": "industry", "keyType": "string_arr", "condition": "is_one_of", "value": ["Software"]},
+      {"key": "last_funding_round_type", "keyType": "string", "condition": "is", "value": "Series B"}
+    ]
+  }'
+```
+
+## Response
+
+Returns `201 Created` with a `FilterSetDetailResponse` object containing the newly created filter set.
+
+```json
+{
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Series B SaaS companies",
+    "type": "account"
+  }
+}
+```
+
+### Response Fields
+
+<ResponseField name="data.id" type="string">
+  The unique identifier of the newly created filter set. Use this as `filter_set_id` in subsequent API requests.
+</ResponseField>
+
+<ResponseField name="data.name" type="string">
+  The human-readable label you provided in the request body.
+</ResponseField>
+
+<ResponseField name="data.type" type="string">
+  The record type this filter set targets — either `"account"` or `"contact"`.
+</ResponseField>
+
+## Error Responses
+
+| Status | Description |
+| --- | --- |
+| `400` | The request body is missing required fields or the filter schema is invalid. |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `filter_sets:write` scope. |
+| `422` | The request is well-formed but contains semantic errors (e.g. an unprocessable field value). |
+| `429` | Rate limit exceeded. Back off and retry. |

@@ -1,0 +1,44 @@
+---
+title: "DELETE /v1/tenants/{product_slug}/limits — Remove a Tenant's Credit Allocations"
+sidebarTitle: "Remove Tenant Limits"
+description: "DELETE /v1/tenants/{product_slug}/limits removes all allocations from a tenant — it becomes unlimited within the parent's own pool. Requires tenants:write."
+---
+
+`DELETE /v1/tenants/{product_slug}/limits` removes every allocation from a direct child tenant. The tenant becomes unlimited within its parent's own credit pool — equivalent to `PUT .../limits` with an empty `limits` array.
+
+## Endpoint
+
+```text
+DELETE https://api.knock2.ai/v1/tenants/{product_slug}/limits
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  A direct child tenant's slug.
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.knock2.ai/v1/tenants/acme_com_yourco_com/limits \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+## Response
+
+A successful request returns `204 No Content` with an empty body.
+
+## Required Scope
+
+Requires `tenants:write`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `400` | The tenant is self-billed (`billing_mode: "self"`) — allocations don't apply to it in the first place. |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:write` scope. |
+| `404` | No tenant found with this `product_slug` as a direct child of your account. |
+| `429` | Rate limit exceeded. |

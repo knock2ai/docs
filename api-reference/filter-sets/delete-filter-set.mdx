@@ -1,0 +1,44 @@
+---
+title: "DELETE /v1/filter-sets/{filter_set_id} — Remove Filter Set"
+sidebarTitle: "Delete Filter Set"
+description: "DELETE /v1/filter-sets/{filter_set_id} permanently removes a saved filter set from your tenant. System-managed sets are protected and return 403."
+---
+
+Use this endpoint to permanently remove a filter set from your tenant. Deletion is irreversible — any queries or integrations that reference the deleted `filter_set_id` will need to be updated. System-managed filter sets are protected and cannot be deleted.
+
+## Endpoint
+
+```
+DELETE https://api.knock2.ai/v1/filter-sets/{filter_set_id}
+```
+
+## Required Scope
+
+Your API key must have the `filter_sets:write` scope (or the broader `all:write` scope) to call this endpoint.
+
+## Path Parameter
+
+<ParamField path="filter_set_id" type="string" required>
+  The unique identifier of the filter set to delete. Retrieve this value from the [List Filter Sets](/api-reference/filter-sets/list-filter-sets) endpoint.
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.knock2.ai/v1/filter-sets/fs_01HX... \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Response
+
+Returns `204 No Content` on success. The response body is empty.
+
+## Error Responses
+
+| Status | Description |
+|--------|-------------|
+| `401`  | Missing or invalid API key. |
+| `403`  | Your API key lacks the `filter_sets:write` scope, or the filter set is system-managed and cannot be deleted. |
+| `404`  | No filter set with the given `filter_set_id` was found. |
+| `422`  | The request is well-formed but contains semantic errors (e.g. an unprocessable parameter value). |
+| `429`  | Rate limit exceeded. Back off and retry. |

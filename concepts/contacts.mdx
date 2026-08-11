@@ -1,0 +1,233 @@
+---
+title: "Knock2 Contacts: Identified Individuals and Data Fields"
+sidebarTitle: "Contacts"
+description: "A contact in Knock2 is an identified individual. Learn available fields including enrichment data, company association, ICP scores, and CRM sync."
+---
+
+Contacts represent identified individual people on your site — matched via email, form fills, CRM sync, or the enrichment API. While [Accounts](/concepts/accounts) track company-level activity, contacts let you understand exactly which person from that company is engaging with your site and how well they fit your ideal customer profile.
+
+## What is a contact?
+
+Knock2 identifies contacts through multiple signals. A visitor becomes a contact when Knock2 can associate a session with a real individual. This happens through:
+
+<CardGroup cols={2}>
+  <Card title="Known visitor sessions" icon="user-check">
+    Returning visitors who were previously identified carry their identity forward across sessions automatically.
+  </Card>
+  <Card title="Form submissions" icon="file-pen">
+    When a visitor submits a form on your site containing their email address, Knock2 matches or creates a contact record.
+  </Card>
+  <Card title="CRM sync" icon="arrows-rotate">
+    Contacts synced from HubSpot or Salesforce are matched to live visitor sessions as they browse.
+  </Card>
+  <Card title="Enrichment API" icon="bolt">
+    Calling `POST /v1/enrich` with an email address triggers contact enrichment and creates or updates a contact record.
+  </Card>
+</CardGroup>
+
+Each contact is linked to an [Account](/concepts/accounts) record for the company they belong to, giving you a unified view of both the organization and the individual.
+
+## Contact data fields
+
+### Identity
+
+<ResponseField name="id" type="string" required>
+  The unique Knock2 identifier for the contact (e.g. `con_01HX...`).
+</ResponseField>
+
+<ResponseField name="first_name" type="string">
+  The contact's first name.
+</ResponseField>
+
+<ResponseField name="last_name" type="string">
+  The contact's last name.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The contact's full display name.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The contact's job title (e.g. `"VP of Engineering"`).
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  The contact's primary email address.
+</ResponseField>
+
+<ResponseField name="business_email" type="string">
+  The contact's work email address, if separately identified.
+</ResponseField>
+
+<ResponseField name="personal_email" type="string">
+  The contact's personal email address, if separately identified.
+</ResponseField>
+
+<ResponseField name="linkedin_url" type="string">
+  URL to the contact's LinkedIn profile (e.g. `"https://linkedin.com/in/jane-doe"`).
+</ResponseField>
+
+<ResponseField name="seniority" type="string">
+  The contact's seniority level (e.g. `"Director"`, `"C-Suite"`, `"Individual Contributor"`).
+</ResponseField>
+
+<ResponseField name="departments" type="string[]">
+  An array of department classifications for the contact (e.g. `["Engineering", "Product"]`).
+</ResponseField>
+
+<ResponseField name="phone_numbers" type="string[]">
+  An array of phone numbers associated with the contact.
+</ResponseField>
+
+### Location
+
+<ResponseField name="address_city" type="string">
+  The contact's city.
+</ResponseField>
+
+<ResponseField name="address_state" type="string">
+  The contact's state or region.
+</ResponseField>
+
+<ResponseField name="address_country" type="string">
+  The contact's country (ISO 3166-1 alpha-2 code, e.g. `"US"`).
+</ResponseField>
+
+<ResponseField name="location" type="string">
+  A human-readable combined location string (e.g. `"New York, NY, US"`).
+</ResponseField>
+
+### Identification metadata
+
+<ResponseField name="match_type" type="string">
+  Describes how this contact was identified (e.g. `"form_fill"`, `"crm_sync"`, `"enrichment"`, `"known_visitor"`).
+</ResponseField>
+
+<ResponseField name="is_qualified" type="boolean">
+  Whether this contact currently passes your configured ICP qualification criteria. Recalculated whenever your ICP definition or the contact's data changes.
+</ResponseField>
+
+<ResponseField name="is_business_email_valid" type="boolean">
+  Whether the contact's business email address passed validation checks.
+</ResponseField>
+
+<ResponseField name="last_enriched_at" type="string">
+  ISO 8601 timestamp of the most recent enrichment run for this contact.
+</ResponseField>
+
+### Company association
+
+<ResponseField name="company_id" type="string">
+  The Knock2 Account ID of the company this contact belongs to.
+</ResponseField>
+
+<ResponseField name="company_name" type="string">
+  The associated company's display name.
+</ResponseField>
+
+<ResponseField name="company_domain" type="string">
+  The associated company's primary domain.
+</ResponseField>
+
+<ResponseField name="company_industry" type="string">
+  The associated company's industry classification.
+</ResponseField>
+
+<ResponseField name="company_estimated_employee_count" type="string">
+  The associated company's banded headcount range.
+</ResponseField>
+
+<ResponseField name="company_estimated_annual_revenue" type="string">
+  The associated company's banded annual revenue range.
+</ResponseField>
+
+### ICP scoring
+
+<ResponseField name="icp_scoring_score" type="number">
+  A 0–100 score representing how well this contact fits your ideal customer profile. Higher is better.
+</ResponseField>
+
+<ResponseField name="icp_scoring_icp_title" type="string">
+  The ICP persona label assigned to this contact (e.g. `"Champion"`, `"Economic Buyer"`).
+</ResponseField>
+
+<ResponseField name="icp_scoring_reason" type="string">
+  A plain-language explanation of why this contact received their score (e.g. `"Senior engineering leader at a Series B SaaS company with 51-200 employees."`).
+</ResponseField>
+
+### CRM data
+
+<ResponseField name="crm_deal_source" type="string">
+  The deal source from your connected CRM. Only populated when a CRM integration is active.
+</ResponseField>
+
+<ResponseField name="crm_deal_stage" type="string">
+  The current deal stage from your CRM.
+</ResponseField>
+
+<ResponseField name="hubspot_company_id" type="string">
+  The matching HubSpot Company record ID.
+</ResponseField>
+
+<ResponseField name="salesforce_account_id" type="string">
+  The matching Salesforce Account record ID.
+</ResponseField>
+
+### Visit and attribution
+
+<ResponseField name="latest_visit_datetime" type="string">
+  ISO 8601 timestamp of this contact's most recent session.
+</ResponseField>
+
+<ResponseField name="latest_visit_page" type="string">
+  The URL or path of the most recently visited page.
+</ResponseField>
+
+<ResponseField name="total_browsing_time_seconds" type="number">
+  Cumulative time in seconds this contact has spent on your website across all sessions.
+</ResponseField>
+
+<ResponseField name="utm_source" type="string">
+  The UTM source captured on the contact's first or most recent attributed session.
+</ResponseField>
+
+<ResponseField name="utm_medium" type="string">
+  The UTM medium for attribution.
+</ResponseField>
+
+<ResponseField name="utm_campaign" type="string">
+  The UTM campaign name for attribution.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of when Knock2 first identified this contact.
+</ResponseField>
+
+## Filtering contacts
+
+The `GET /v1/contacts` endpoint accepts several query parameters for targeted lookups:
+
+| Parameter | Description |
+|-----------|-------------|
+| `email` | Return the contact matching a specific email address. |
+| `account_id` | Return all contacts associated with a specific Knock2 Account ID. |
+| `filter_set_id` | Apply a saved [Filter Set](/concepts/filter-sets) by ID. |
+| `cursor` | Cursor token for paginated result sets. |
+| `limit` | Maximum number of contacts to return per page. |
+
+For example, to fetch all contacts from a specific company:
+
+```bash
+curl "https://api.knock2.ai/v1/contacts?account_id=acc_01HX..." \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## ICP scoring
+
+Every contact carries an ICP score that reflects both firmographic fit and behavioral signals. The `icp_scoring_score` field gives you a numeric value from **0 to 100**, while `icp_scoring_reason` provides a plain-language explanation so your team understands the "why" behind the score — not just the number.
+
+<Info>
+  ICP scores are recalculated automatically as new visit data arrives and as enrichment data is refreshed. You can also retrieve the full score history for any contact via the [Lead Scores](/concepts/lead-scores) API.
+</Info>
+
+Use `is_qualified` as a fast boolean gate for routing and alerting workflows — it reflects whether the contact currently meets all of the threshold conditions you've defined in your ICP configuration.

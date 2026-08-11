@@ -1,0 +1,116 @@
+---
+title: "POST /v1/webhooks — Create a Webhook Subscription"
+sidebarTitle: "Create Webhook"
+description: "POST /v1/webhooks registers a new webhook endpoint for one or more Knock2 event types. Payloads are signed with HMAC-SHA256 for secure delivery."
+---
+
+Webhook subscriptions let you receive real-time HTTP notifications whenever Knock2 identifies a visitor, updates a lead score, or triggers a play. When you call `POST /v1/webhooks`, Knock2 registers your endpoint and begins delivering signed payloads for every event type you specify. All outbound payloads are signed with HMAC-SHA256 so you can verify they originated from Knock2.
+
+A parent key can also register a webhook on behalf of a direct child tenant by adding `X-Knock-Tenant` (or `?product_slug=`) — see [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data). The subscription is created under the child's own tenant, so only that child's events are delivered to the given URL — a parent-level subscription (created with no header) instead fans out to every child automatically, so use the header only when you want a specific child's events routed to a specific URL.
+
+## Endpoint
+
+```text
+POST https://api.knock2.ai/v1/webhooks
+```
+
+## Required Scope
+
+Your API key must have the `webhooks:write` scope (or the broader `all:write` scope) to call this endpoint.
+
+## Request Body
+
+<ParamField body="url" type="string" required>
+  The HTTPS URL that Knock2 will POST event payloads to. HTTP URLs are rejected with a `400` error — your endpoint must use HTTPS.
+</ParamField>
+
+<ParamField body="events" type="array of strings" required>
+  One or more event type strings that this subscription should receive. See the valid event types table below for all supported values.
+</ParamField>
+
+<ParamField body="name" type="string">
+  A human-readable label for this subscription (e.g. `"CRM sync"`). Useful for identifying subscriptions in the Knock2 dashboard.
+</ParamField>
+
+<ParamField query="product_slug" type="string">
+  Register this webhook on behalf of a direct child tenant instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`.
+</ParamField>
+
+## Valid Event Types
+
+| Event | When it fires |
+| --- | --- |
+| `account.identified` | A company was identified from a site visit |
+| `contact.identified` | An individual person was identified |
+| `score.changed` | A lead score was updated |
+| `play.triggered` | A play fired for a contact or account |
+
+## Example Request
+
+```bash
+curl -X POST https://api.knock2.ai/v1/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-app.example.com/webhooks/knock2",
+    "events": ["account.identified", "contact.identified"],
+    "name": "CRM sync"
+  }'
+```
+
+## Response
+
+A successful request returns `201 Created` with a `WebhookResponse` body.
+
+```json
+{
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "url": "https://your-app.example.com/webhooks/knock2",
+    "events": ["account.identified", "contact.identified"],
+    "name": "CRM sync",
+    "secret_prefix": "whsec_abc1234567",
+    "created_at": "2024-06-01T14:23:00Z"
+  }
+}
+```
+
+<ResponseField name="data.id" type="string">
+  The unique identifier for this webhook subscription. Use it to delete the subscription later.
+</ResponseField>
+
+<ResponseField name="data.url" type="string">
+  The HTTPS URL registered to receive event payloads.
+</ResponseField>
+
+<ResponseField name="data.events" type="array of strings">
+  The event types this subscription is listening for.
+</ResponseField>
+
+<ResponseField name="data.name" type="string">
+  The human-readable label you provided for this subscription.
+</ResponseField>
+
+<ResponseField name="data.secret_prefix" type="string">
+  A truncated preview of the signing secret assigned to this subscription.
+</ResponseField>
+
+<Note>
+  `secret_prefix` is only a preview of the full signing secret, shown for identifying the subscription in the UI. Fetch the full signing key any time via [Get Webhook Secret](/api-reference/webhooks/get-webhook-secret).
+</Note>
+
+Signatures are delivered on each delivery in the `X-Knock-Signature` request header (HMAC-SHA256 over the raw request body).
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Invalid request — the `url` is not a valid HTTPS URL, or one or more `events` values are not recognized event types. |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `webhooks:write` scope. |
+| `422` | Request body could not be processed — check that all required fields are present and correctly typed. |
+| `429` | Rate limit exceeded. Slow down your request rate and retry. |

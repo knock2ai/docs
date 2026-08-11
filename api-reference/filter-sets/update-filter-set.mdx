@@ -1,0 +1,109 @@
+---
+title: "PUT /v1/filter-sets/{filter_set_id} — Update a Filter Set"
+sidebarTitle: "Update Filter Set"
+description: "PUT /v1/filter-sets/{filter_set_id} updates an existing filter set's name, type, or rules. All body fields are optional — only provided fields are changed."
+---
+
+Use this endpoint to rename a filter set, change its target record type, or replace its filter rules. All request body fields are optional — you only need to include the fields you want to change, and the rest remain untouched.
+
+## Endpoint
+
+```text
+PUT https://api.knock2.ai/v1/filter-sets/{filter_set_id}
+```
+
+## Required Scope
+
+Your API key must have the `filter_sets:write` scope (or the broader `all:write` scope) to call this endpoint.
+
+## Path Parameter
+
+<ParamField path="filter_set_id" type="string" required>
+  The unique identifier of the filter set to update. Retrieve this value from the [List Filter Sets](/api-reference/filter-sets/list-filter-sets) endpoint.
+</ParamField>
+
+## Request Body
+
+All fields are optional. Only the fields you include in the request are updated.
+
+<ParamField body="name" type="string">
+  A new human-readable label for the filter set.
+</ParamField>
+
+<ParamField body="type" type="string">
+  Change the record type the filter set targets. Accepted values are `"account"` and `"contact"`. Be aware that changing `type` may invalidate existing filters that reference type-specific attributes.
+</ParamField>
+
+<ParamField body="filters" type="array">
+  A replacement array of filter rule objects. When provided, this value fully replaces the existing filter rules — it is not merged. Each object requires `key`, `keyType`, and `condition` fields, with an optional `value`.
+
+  <Expandable title="filters[n] fields">
+    <ParamField body="key" type="string" required>
+      The attribute name to filter on.
+    </ParamField>
+
+    <ParamField body="keyType" type="string" required>
+      The data type of the attribute. Accepted values: `"boolean"`, `"date_range"`, `"employee_range"`, `"existence"`, `"nullable_boolean_arr"`, `"number"`, `"number_with_id"`, `"revenue_range"`, `"string"`, `"string_arr"`, `"string_pattern"`, `"string_searchable"`, `"string_with_id"`.
+    </ParamField>
+
+    <ParamField body="condition" type="string" required>
+      The comparison operator to apply. Valid operators depend on the `keyType` chosen. Full set: `is`, `is_not`, `contains`, `does_not_contain`, `starts_with`, `ends_with`, `exists`, `does_not_exist`, `exclude_personal_emails` (string types); `is_one_of`, `is_not_in` (array/bucket types); `gt`, `gte`, `lt`, `lte` (number types); `before`, `after`, `between` (date\_range). See the [Filtering guide](/guides/filtering) for the full matrix of which conditions apply to which `keyType`.
+    </ParamField>
+
+    <ParamField body="value" type="string | number | boolean">
+      The value to compare against. Not required for `existence` conditions; required for all other condition types.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X PUT https://api.knock2.ai/v1/filter-sets/<filter_set_id> \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Series B SaaS (updated)"}'
+```
+
+## Response
+
+Returns `200 OK` with the updated `FilterSetDetailResponse` object.
+
+```json
+{
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Series B SaaS (updated)",
+    "type": "account"
+  }
+}
+```
+
+### Response Fields
+
+<ResponseField name="data.id" type="string">
+  The unique identifier of the updated filter set.
+</ResponseField>
+
+<ResponseField name="data.name" type="string">
+  The current human-readable label for the filter set after the update.
+</ResponseField>
+
+<ResponseField name="data.type" type="string">
+  The record type this filter set targets — either `"account"` or `"contact"`.
+</ResponseField>
+
+<Note>
+  System-managed filter sets cannot be updated via the API. Attempting to modify one returns a `403` error.
+</Note>
+
+## Error Responses
+
+| Status | Description |
+| --- | --- |
+| `400` | The request body contains invalid fields or a malformed filter schema. |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key lacks the `filter_sets:write` scope, or the filter set is system-managed and cannot be modified. |
+| `404` | No filter set with the given `filter_set_id` was found. |
+| `422` | The request is well-formed but contains semantic errors (e.g. an unprocessable field value). |
+| `429` | Rate limit exceeded. Back off and retry. |

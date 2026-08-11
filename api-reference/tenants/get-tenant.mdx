@@ -1,0 +1,54 @@
+---
+title: "GET /v1/tenants/{product_slug} — Get One Tenant"
+sidebarTitle: "Get Tenant"
+description: "GET /v1/tenants/{product_slug} returns one tenant — your own, or a direct child — with its current credit allocation set. Requires tenants:read."
+---
+
+`GET /v1/tenants/{product_slug}` returns a single tenant's summary: name, domain, active status, billing mode, and its current allocation set with usage. `product_slug` may be your own key's tenant, or any direct child of it.
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/tenants/{product_slug}
+```
+
+## Path Parameter
+
+<ParamField path="product_slug" type="string" required>
+  The tenant's slug — your own key's `product_slug`, or a direct child's.
+</ParamField>
+
+## Example Request
+
+```bash
+curl https://api.knock2.ai/v1/tenants/acme_com_yourco_com \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+## Response
+
+```json
+{
+  "data": {
+    "product_slug": "acme_com_yourco_com",
+    "name": "Acme Corp",
+    "domain": "acme.com",
+    "is_active": true,
+    "billing_mode": "parent",
+    "limits": []
+  }
+}
+```
+
+## Required Scope
+
+Requires `tenants:read`.
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `tenants:read` scope. |
+| `404` | No tenant found with this `product_slug` under your account — this includes tenants that exist but were provisioned by a different parent; ownership and existence are not distinguished in the response. |
+| `429` | Rate limit exceeded. |

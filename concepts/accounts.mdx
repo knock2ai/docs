@@ -1,0 +1,160 @@
+---
+title: "Knock2 Accounts: Identified Companies and Data Fields"
+sidebarTitle: "Accounts"
+description: "An account in Knock2 represents an identified company visiting your website. Learn what data fields are available and how accounts are created."
+---
+
+When a company visits your website, Knock2 resolves the session's IP address and browser signals to a real organization and creates an **Account** record. Accounts are the foundational company-level objects in Knock2 — every identified visit, contact, score, and CRM sync is anchored to one.
+
+## What is an account?
+
+Knock2 uses IP-to-company resolution combined with browser-level signals to map live website sessions to organizations. When the resolution confidence meets the identification threshold, Knock2 creates or updates an Account record for that company. Each account is unique per organization — repeated visits by the same company accumulate activity on the same record rather than creating duplicates.
+
+Account records grow richer over time. As the company continues to visit, Knock2 appends visit history, refreshes enrichment data, calculates lead scores, and — if you have a CRM integration enabled — surfaces deal context directly on the account.
+
+## Account data fields
+
+<ResponseField name="id" type="string" required>
+  The unique Knock2 identifier for the account (e.g. `acc_01HX...`).
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The company's display name (e.g. `"Acme Corporation"`).
+</ResponseField>
+
+<ResponseField name="domain" type="string">
+  The company's primary website domain (e.g. `"acme.com"`). Used for CRM matching and deduplication.
+</ResponseField>
+
+<ResponseField name="industry" type="string">
+  The company's industry classification (e.g. `"Software"`, `"Financial Services"`).
+</ResponseField>
+
+<ResponseField name="sector" type="string">
+  A broader sector grouping for the company (e.g. `"Technology"`).
+</ResponseField>
+
+<ResponseField name="estimated_employee_count" type="string">
+  A banded headcount range (e.g. `"51-200"`, `"1001-5000"`).
+</ResponseField>
+
+<ResponseField name="estimated_annual_revenue" type="string">
+  A banded annual revenue range (e.g. `"$10M-$50M"`).
+</ResponseField>
+
+<ResponseField name="phone_numbers" type="string[]">
+  An array of phone numbers associated with the company.
+</ResponseField>
+
+<ResponseField name="tags" type="string[]">
+  Firmographic tags applied to the account (e.g. `["B2B", "PLG"]`).
+</ResponseField>
+
+<ResponseField name="technology_tags" type="string[]">
+  Technology stack tags detected or enriched for the company (e.g. `["Salesforce", "HubSpot", "React"]`).
+</ResponseField>
+
+<ResponseField name="address_city" type="string">
+  City of the company's primary address.
+</ResponseField>
+
+<ResponseField name="address_state" type="string">
+  State or region of the company's primary address.
+</ResponseField>
+
+<ResponseField name="address_country" type="string">
+  Country of the company's primary address (ISO 3166-1 alpha-2 code, e.g. `"US"`).
+</ResponseField>
+
+<ResponseField name="location" type="string">
+  A human-readable combined location string (e.g. `"San Francisco, CA, US"`).
+</ResponseField>
+
+<ResponseField name="last_funding_date" type="string">
+  ISO 8601 date of the company's most recent funding event (e.g. `"2023-09-15"`).
+</ResponseField>
+
+<ResponseField name="last_funding_round_type" type="string">
+  The type of the most recent funding round (e.g. `"Series B"`, `"Seed"`).
+</ResponseField>
+
+<ResponseField name="last_funding_amount" type="string">
+  The amount raised in the most recent funding round (e.g. `"$20,000,000"`).
+</ResponseField>
+
+<ResponseField name="crm_deal_source" type="string">
+  The deal source as synced from your connected CRM. Only populated when a CRM integration is active.
+</ResponseField>
+
+<ResponseField name="crm_deal_stage" type="string">
+  The current deal stage from your connected CRM (e.g. `"Negotiation"`).
+</ResponseField>
+
+<ResponseField name="crm_deal_value_usd" type="number">
+  The deal value in USD as synced from your CRM.
+</ResponseField>
+
+<ResponseField name="hubspot_company_id" type="string">
+  The matching HubSpot Company record ID. Populated when the HubSpot integration is enabled.
+</ResponseField>
+
+<ResponseField name="salesforce_account_id" type="string">
+  The matching Salesforce Account record ID. Populated when the Salesforce integration is enabled.
+</ResponseField>
+
+<ResponseField name="latest_visit_datetime" type="string">
+  ISO 8601 timestamp of the most recent session from this account (e.g. `"2024-06-01T14:30:00Z"`).
+</ResponseField>
+
+<ResponseField name="latest_visit_page" type="string">
+  The URL or path of the most recently visited page (e.g. `"/pricing"`).
+</ResponseField>
+
+<ResponseField name="total_browsing_time_seconds" type="number">
+  The cumulative time in seconds this account has spent on your website across all sessions.
+</ResponseField>
+
+<ResponseField name="utm_source" type="string">
+  The UTM source captured on the account's first or most recent attributed session (e.g. `"google"`).
+</ResponseField>
+
+<ResponseField name="utm_medium" type="string">
+  The UTM medium for attribution (e.g. `"cpc"`, `"email"`).
+</ResponseField>
+
+<ResponseField name="utm_campaign" type="string">
+  The UTM campaign name for attribution (e.g. `"q3-launch"`).
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of when Knock2 first identified this account.
+</ResponseField>
+
+## Pagination
+
+The `GET /v1/accounts` endpoint returns results as a paginated list. Knock2 uses **cursor-based pagination** — each response includes a `next_cursor` value you pass as the `cursor` query parameter on your next request to fetch the following page. This approach ensures stable, consistent results even when new accounts are identified between requests.
+
+See the [Pagination guide](/guides/pagination) for a full walkthrough of cursor handling, page size configuration, and iterating to the end of a result set.
+
+## Filtering
+
+Accounts support a rich set of filter conditions covering firmographic data, visit behavior, UTM attribution, funding signals, and CRM deal context. You can pass inline filter JSON directly on the request, or save a reusable query as a Filter Set and reference it by ID.
+
+- Learn about all available filter operators in the [Filtering guide](/guides/filtering).
+- Learn how to save and reuse filter queries in [Filter Sets](/concepts/filter-sets).
+
+## Looking up a single account
+
+Use `GET /v1/accounts/{account_id}` to fetch a single account by its Knock2 ID:
+
+```bash
+curl "https://api.knock2.ai/v1/accounts/acc_01HX..." \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+You can also look up an account by its company domain by passing the `domain` query parameter to `GET /v1/accounts`. This is useful when you have the domain from a CRM record or form fill but not the internal Knock2 ID:
+
+```bash
+curl "https://api.knock2.ai/v1/accounts?domain=acme.com" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```

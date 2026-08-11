@@ -1,0 +1,232 @@
+---
+title: "Quickstart: Install Knock2 and Make Your First API Call"
+sidebarTitle: "Quickstart"
+description: "Learn how to install the Knock2 tracking script, get your API key, and make your first API call to retrieve identified visitors from your website."
+---
+
+This guide walks you through everything you need to go from a blank slate to seeing real identified visitor data in your Knock2 account. By the end you'll have the tracking script live on your site, your API key verified, and your first batch of identified companies returned from the API — all in about five minutes.
+
+<Steps>
+  <Step title="Get your API key">
+    Log in to the [Knock2 dashboard](https://app.knock2.ai) and navigate to **Settings → API Keys**. Click **Create API Key**, give it a descriptive name (for example, `production-server`), and copy the generated key.
+
+    <Warning>
+      Your API key is shown only once at creation time. Store it immediately in a secure secret manager (such as AWS Secrets Manager, HashiCorp Vault, or a `.env` file that is not committed to version control). Treat it with the same care as a password.
+    </Warning>
+
+    API keys are prefixed with `kn_live_` so you can identify them at a glance in logs and configuration files.
+  </Step>
+  <Step title="Verify your API key">
+    Before embedding anything on your site, confirm that your key is valid by calling the `/v1/me` endpoint. A successful response tells you the tenant your key is scoped to and which permissions it carries.
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X GET https://api.knock2.ai/v1/me \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+
+    ```python Python
+    import requests
+    
+    response = requests.get(
+        "https://api.knock2.ai/v1/me",
+        headers={"Authorization": "Bearer YOUR_API_KEY"},
+    )
+    print(response.json())
+    ```
+
+    ```javascript Node.js
+    const response = await fetch("https://api.knock2.ai/v1/me", {
+      headers: { Authorization: "Bearer YOUR_API_KEY" },
+    });
+    const data = await response.json();
+    console.log(data);
+    ```
+
+    </CodeGroup>
+
+    A valid key returns a `200 OK` with a payload like this:
+
+    ```json
+    {
+      "data": {
+        "product_slug": "your_tenant",
+        "status": "ok"
+      }
+    }
+    ```
+
+    `GET /v1/me` intentionally returns the minimum possible payload — it doesn't include the key's scopes.
+
+    <Tip>
+      If you receive a `401 Unauthorized` response instead, double-check that you copied the full key and that the `Authorization` header includes the word `Bearer` followed by a space before the key value.
+    </Tip>
+  </Step>
+  <Step title="Install the tracking script">
+    Knock2 generates a personalised embed snippet for your tenant. Fetch it by calling `GET /v1/script`:
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl https://api.knock2.ai/v1/script \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+
+    ```python Python
+    import requests
+    
+    response = requests.get(
+        "https://api.knock2.ai/v1/script",
+        headers={"Authorization": "Bearer YOUR_API_KEY"},
+    )
+    print(response.json())
+    ```
+
+    </CodeGroup>
+
+    The response includes an `embed_html` field containing the ready-to-paste snippet. Copy the value and add it to the `<head>` of every page on your site:
+
+    ```html
+    <head>
+      <!-- Knock2 visitor identification -->
+      <script src="https://api.knock2.ai/install/your_tenant/prod" async></script>
+    </head>
+    ```
+
+    The script is served from Knock2's own API (not a separate CDN domain), and the tenant slug is baked into the URL path server-side — there's no `data-slug` attribute to set.
+
+    <Note>
+      The `async` attribute ensures the Knock2 script never blocks your page's critical rendering path. You can also load it via a tag manager such as Google Tag Manager or Segment if you prefer not to modify your HTML directly.
+    </Note>
+
+    If you use a JavaScript framework, add the snippet inside the `<Head>` component of your root layout so it loads on every route:
+
+    ```jsx Next.js (App Router)
+    // app/layout.tsx
+    import Script from "next/script";
+    
+    export default function RootLayout({ children }) {
+      return (
+        <html>
+          <head>
+            <Script
+              src="https://api.knock2.ai/install/your_tenant/prod"
+              strategy="afterInteractive"
+            />
+          </head>
+          <body>{children}</body>
+        </html>
+      );
+    }
+    ```
+  </Step>
+  <Step title="Verify the script is live">
+    After adding the snippet, open your site in a browser (an incognito window works great) and load a page. Then call `GET /v1/script/status` to confirm Knock2 received the first beacon:
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl https://api.knock2.ai/v1/script/status \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+
+    ```python Python
+    import requests
+    
+    response = requests.get(
+        "https://api.knock2.ai/v1/script/status",
+        headers={"Authorization": "Bearer YOUR_API_KEY"},
+    )
+    print(response.json())
+    ```
+
+    </CodeGroup>
+
+    Once Knock2 has recorded at least one real page view, the `is_installed` field returns `true`:
+
+    ```json
+    {
+      "data": {
+        "is_installed": true,
+        "visitor_count_last_7_days": 1,
+        "last_visit_at": "2024-06-01T14:23:00Z"
+      }
+    }
+    ```
+
+    <Tip>
+      If `is_installed` stays `false` after a minute, check your browser's Network tab for a request to your `/install/{your_tenant}/prod` script URL. Ad blockers and some content-security policies can suppress the beacon — try from a device without an ad blocker first.
+    </Tip>
+  </Step>
+  <Step title="Fetch your first identified accounts">
+    Once real traffic starts flowing, call `GET /v1/accounts` to retrieve the companies Knock2 has identified on your site:
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl https://api.knock2.ai/v1/accounts \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+
+    ```python Python
+    import requests
+    
+    response = requests.get(
+        "https://api.knock2.ai/v1/accounts",
+        headers={"Authorization": "Bearer YOUR_API_KEY"},
+    )
+    accounts = response.json()
+    for account in accounts["data"]:
+        print(account["name"], account["domain"])
+    ```
+
+    ```javascript Node.js
+    const response = await fetch("https://api.knock2.ai/v1/accounts", {
+      headers: { Authorization: "Bearer YOUR_API_KEY" },
+    });
+    const { data } = await response.json();
+    data.forEach((acc) => console.log(acc.name, acc.domain));
+    ```
+
+    </CodeGroup>
+
+    A successful response returns a paginated list of identified account objects:
+
+    ```json
+    {
+      "data": [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "name": "Acme Corp",
+          "domain": "acme.com",
+          "industry": "Software",
+          "estimated_employee_count": "51-200",
+          "latest_visit_page": "/pricing",
+          "latest_visit_datetime": "2024-06-01T14:23:00Z"
+        }
+      ],
+      "has_more": false,
+      "next_cursor": null
+    }
+    ```
+
+    <Note>
+      Identification is not instantaneous. Knock2 processes session signals asynchronously, so there may be a short lag (typically under 60 seconds) between a visit and the account appearing in the API response. Most customers see their first identified accounts within a few hours of the script going live.
+    </Note>
+  </Step>
+</Steps>
+
+## Next steps
+
+You're live. Now explore what you can do with the data Knock2 is collecting.
+
+<CardGroup cols={2}>
+  <Card title="Set up Webhooks" icon="webhook" href="/guides/webhooks">
+    Push real-time alerts to Slack, your CRM, or any HTTP endpoint the moment a high-intent visitor lands on your site.
+  </Card>
+
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Explore the full REST API — accounts, contacts, enrichment, filter sets, webhooks, and more.
+  </Card>
+</CardGroup>

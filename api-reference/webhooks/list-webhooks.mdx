@@ -1,0 +1,91 @@
+---
+title: "GET /v1/webhooks — List Webhook Subscriptions"
+sidebarTitle: "List Webhooks"
+description: "GET /v1/webhooks returns all active webhook subscriptions for your Knock2 tenant. Audit registered endpoints or confirm a new subscription was created."
+---
+
+Use `GET /v1/webhooks` to retrieve every active webhook subscription associated with your Knock2 tenant. This is useful for auditing which endpoints are receiving event payloads, confirming that a newly created subscription is registered, or building subscription management interfaces for your users.
+
+## Endpoint
+
+```text
+GET https://api.knock2.ai/v1/webhooks
+```
+
+All active subscriptions for the authenticated tenant are returned in a single response.
+
+## Required Scope
+
+Your API key must have the `webhooks:read` scope (or the broader `all:read` scope) to call this endpoint.
+
+## Parameters
+
+<ParamField query="product_slug" type="string">
+  Read a direct child tenant's webhook subscriptions instead of your own (multi-tenant partners only). The `X-Knock-Tenant` header takes precedence if both are supplied. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Same as `product_slug` above, as a header instead of a query param. Naming a slug that isn't a direct child of your key returns `404`, never `403`.
+</ParamField>
+
+## Example Request
+
+```bash
+curl https://api.knock2.ai/v1/webhooks \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Response
+
+A successful request returns `200 OK` with a `WebhookListResponse` body containing an array of subscription objects.
+
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "url": "https://your-app.example.com/webhooks/knock2",
+      "events": ["account.identified"],
+      "name": "CRM sync",
+      "secret_prefix": "whsec_abc1234567",
+      "is_active": true,
+      "created_at": "2024-06-01T14:23:00Z",
+      "last_success_at": null,
+      "last_failure_at": null
+    }
+  ]
+}
+```
+
+<ResponseField name="data" type="array">
+  An array of webhook subscription objects. Returns an empty array if no subscriptions exist.
+</ResponseField>
+
+<ResponseField name="data[].id" type="string">
+  The unique identifier for the webhook subscription.
+</ResponseField>
+
+<ResponseField name="data[].url" type="string">
+  The HTTPS URL registered to receive event payloads for this subscription.
+</ResponseField>
+
+<ResponseField name="data[].events" type="array of strings">
+  The event types this subscription is currently listening for.
+</ResponseField>
+
+<ResponseField name="data[].name" type="string">
+  The human-readable label assigned to this subscription.
+</ResponseField>
+
+<ResponseField name="data[].secret_prefix" type="string">
+  A truncated preview of the signing secret for this subscription.
+</ResponseField>
+
+## Error Responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing or invalid API key. |
+| `403` | Your API key does not have the `webhooks:read` scope. |
+| `422` | Request could not be processed — verify your request is well-formed. |
+| `429` | Rate limit exceeded. Slow down your request rate and retry. |

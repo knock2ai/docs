@@ -1,0 +1,210 @@
+---
+title: "Knock2 REST API Reference Overview"
+sidebarTitle: "Overview"
+description: "Complete reference for the Knock2 Public API v1. Covers authentication, base URL, pagination, rate limits, and error handling for all endpoints."
+---
+
+The Knock2 REST API gives you programmatic access to everything the Knock2 platform identifies and enriches — company accounts that visit your website, individual contacts, ICP scoring data, CRM field mappings, and more. Every resource is available over HTTPS, returns JSON, and follows predictable, resource-oriented URL conventions. Whether you're pulling identified accounts into your CRM, triggering outbound sequences, or building custom dashboards, this reference covers every endpoint, parameter, and response field you need.
+
+---
+
+## Base URL
+
+All API requests are made to the following base URL:
+
+```text
+https://api.knock2.ai
+```
+
+Every endpoint is prefixed with the API version, so a complete URL looks like:
+
+```text
+https://api.knock2.ai/v1/accounts
+```
+
+---
+
+## Authentication
+
+The Knock2 API uses **Bearer token authentication**. Include your API key in the `Authorization` header of every request:
+
+```bash
+Authorization: Bearer <api_key>
+```
+
+Requests without a valid API key return a `401 Unauthorized` response. You can generate and manage your API keys from the Knock2 dashboard.
+
+<Note>
+  See the [Authentication guide](/authentication) for full details on key scopes, rotation, and security best practices.
+</Note>
+
+---
+
+## Versioning
+
+The current API version is **v1**. All endpoints are prefixed with `/v1/`. When breaking changes are introduced, a new version prefix will be released and the previous version will be supported for a deprecation window. Non-breaking additions — new optional fields, new optional request parameters — may be added to the current version at any time.
+
+---
+
+## Pagination
+
+List endpoints return **cursor-based paginated** results. Cursor-based pagination is more stable than offset pagination when records are being added in real time — you won't miss records or see duplicates as you page through results.
+
+**Request parameters**
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `limit` | integer | `50` | Number of records to return. Minimum 1, maximum 100. |
+| `cursor` | string | — | Opaque cursor returned by the previous response. Omit on the first request. |
+
+**Response envelope**
+
+Every paginated response includes:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `data` | array | The current page of results. |
+| `has_more` | boolean | `true` if there are additional pages after this one. |
+| `next_cursor` | string \| null | Pass this value as the `cursor` parameter to retrieve the next page. `null` when `has_more` is `false`. |
+
+<Note>
+  See the [Pagination guide](/guides/pagination) for a complete walkthrough with code examples.
+</Note>
+
+---
+
+## Rate Limits
+
+The API enforces rate limits to ensure fair use and platform stability. When you exceed the limit, the API returns a **`429 Too Many Requests`** response with error code `rate_limit_exceeded`.
+
+**Best practices for handling rate limits:**
+
+- Implement **exponential backoff** — after a `429`, wait before retrying, and double the wait time on each subsequent `429`.
+- Respect the `X-RateLimit-Reset` header (a Unix timestamp for when the current window resets) rather than a fixed delay. There is no `Retry-After` header.
+- Avoid tight polling loops; prefer webhooks or reasonable polling intervals (30 seconds or more).
+
+---
+
+## Error Format
+
+All error responses use a consistent envelope:
+
+```json
+{
+  "error": {
+    "code": "string",
+    "message": "string",
+    "details": null
+  }
+}
+```
+
+- **`code`** — A machine-readable string you can use to handle specific error cases programmatically.
+- **`message`** — A human-readable description of what went wrong.
+- **`details`** — Optional structured information about the error (for example, per-field validation errors). `null` when not applicable.
+
+**Common error codes**
+
+| HTTP Status | `code` | Meaning |
+| --- | --- | --- |
+| `400` | `bad_request` | Invalid parameters or request body. |
+| `401` | `unauthorized` | Invalid or missing API key. |
+| `402` | `payment_required` | Either your account has exhausted its credits for the billing period (`POST /v1/enrich`), or the workspace itself is deactivated (`is_product_slug_active = false`) — in which case **every** `/v1` route 402s, including `GET /v1/me`, until it's reactivated. |
+| `403` | `forbidden` | API key is missing a required scope for this action. |
+| `404` | `not_found` | The requested resource does not exist. |
+| `422` | `validation_error` | Request body failed schema validation. |
+| `429` | `rate_limit_exceeded` | Too many requests — apply exponential backoff and retry. |
+
+---
+
+## Available Endpoints
+
+### Accounts
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/v1/accounts` | List all identified company accounts. |
+| `GET` | `/v1/accounts/{account_id}` | Retrieve a single account by ID or domain. |
+
+### Contacts
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/v1/contacts` | List all identified individual contacts. |
+| `GET` | `/v1/contacts/{contact_id}` | Retrieve a single contact's full profile. |
+
+### Filter Sets
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/v1/filter-sets` | List all saved filter sets. |
+| `POST` | `/v1/filter-sets` | Create a new filter set. Requires `filter_sets:write`. |
+| `PUT` | `/v1/filter-sets/{filter_set_id}` | Update a filter set. Requires `filter_sets:write`. |
+| `DELETE` | `/v1/filter-sets/{filter_set_id}` | Delete a filter set. Requires `filter_sets:write`. |
+
+There is no `GET /v1/filter-sets/{filter_set_id}` endpoint — filter sets can only be retrieved via the list endpoint.
+
+### Webhooks
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/v1/webhooks` | List all webhook subscriptions. |
+| `POST` | `/v1/webhooks` | Register a new webhook subscription. |
+| `DELETE` | `/v1/webhooks/{webhook_id}` | Delete a webhook subscription. |
+
+There is no `GET /v1/webhooks/{webhook_id}` or `PUT /v1/webhooks/{webhook_id}` endpoint — subscriptions can only be listed in bulk, created, or deleted.
+
+### Auth
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/v1/me` | Verify an API key and see which tenant it belongs to. |
+
+### Activity
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/v1/activity` | List page-visit activity for an account or contact, or a tenant-wide feed (newest first) if both are omitted. |
+
+### Scores
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/v1/scores` | Get the current (and optionally historical) lead score for an account or contact. |
+| `GET` | `/v1/scores/recent` | List the most recent lead score changes across the tenant. |
+
+### Enrichment
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/v1/enrich` | Enrich a contact profile by email. Requires `enrichment:write`. |
+
+### Tenants (multi-tenant partners only)
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/v1/tenants` | Provision a new tenant. Requires `tenants:write`. |
+| `GET` | `/v1/tenants` | List your direct child tenants with their allocations and usage. Requires `tenants:read`. |
+| `GET` | `/v1/tenants/{product_slug}` | Get one tenant (self, or a direct child). Requires `tenants:read`. |
+| `PATCH` | `/v1/tenants/{product_slug}` | Update a tenant's `name` and/or `domain`. Requires `tenants:write`. |
+| `POST` | `/v1/tenants/{product_slug}/activate` | Reactivate a deactivated tenant. Requires `tenants:write`. |
+| `DELETE` | `/v1/tenants/{product_slug}` | Deactivate a tenant you provisioned. Requires `tenants:write`. |
+| `GET` | `/v1/tenants/{product_slug}/limits` | Get a tenant's credit allocations. Requires `tenants:read`. |
+| `PUT` | `/v1/tenants/{product_slug}/limits` | Replace a tenant's credit allocations. Requires `tenants:write`. |
+| `DELETE` | `/v1/tenants/{product_slug}/limits` | Remove a tenant's credit allocations. Requires `tenants:write`. |
+| `GET` | `/v1/tenants/{product_slug}/usage` | Get a tenant's usage for a window. Requires `tenants:read`. |
+| `GET` | `/v1/tenants/{product_slug}/scoring-config` | Get a tenant's Company Profile and Buyer Persona (lead-scoring config). Requires `tenants:read`. |
+| `PATCH` | `/v1/tenants/{product_slug}/scoring-config` | Set a tenant's Company Profile and Buyer Persona. Requires `tenants:write`. |
+| `GET` | `/v1/tenants/{product_slug}/script-config` | Get a tenant's tracking-script exclusion configuration (`pages_to_ignore`). Requires `tenants:read`. |
+| `PATCH` | `/v1/tenants/{product_slug}/script-config` | Set a tenant's tracking-script exclusion configuration. Requires `tenants:write`. |
+
+<Note>
+  A parent key can also read one direct child tenant's account/contact/activity/score data without switching keys — see [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
+</Note>
+
+### Tracking Script
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/v1/script` | Get the tracking script embed snippet for the calling key's tenant (or a direct child's, via `X-Knock-Tenant`). |
+| `GET` | `/v1/script/status` | Check whether the tracking script is installed and firing (or a direct child's, via `X-Knock-Tenant`). |

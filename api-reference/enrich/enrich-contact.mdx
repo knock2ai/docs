@@ -1,0 +1,118 @@
+---
+title: "POST /v1/enrich — Enrich a Contact by Email"
+sidebarTitle: "Enrich Contact"
+description: "POST /v1/enrich looks up an email address and returns a merged contact profile. Costs 1 credit per match. Requires the enrichment:write scope."
+---
+
+`POST /v1/enrich` runs an email address through Knock2's enrichment waterfall — querying multiple data vendors in sequence and merging the results into a single unified contact profile. You get back fields like job title, seniority, department, and company details in one call. Each successful enrichment costs 1 credit from your account balance, so Knock2 only charges you when data is actually found.
+
+## Endpoint
+
+```
+POST https://api.knock2.ai/v1/enrich
+```
+
+## Request Body
+
+<ParamField body="email" type="string" required>
+  The email address of the contact you want to enrich. Must be a valid email format.
+</ParamField>
+
+<ParamField body="linkedin_url" type="string">
+  The LinkedIn profile URL for the contact (e.g. `https://linkedin.com/in/janesmith`). Providing this improves match quality and increases the likelihood of a successful enrichment.
+</ParamField>
+
+## Example Request
+
+```bash
+curl -X POST https://api.knock2.ai/v1/enrich \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "jane.smith@acme.com", "linkedin_url": "https://linkedin.com/in/janesmith"}'
+```
+
+## Response
+
+A successful request returns `200 OK` with an `EnrichResponse` body.
+
+```json
+{
+  "status": "enriched",
+  "contact_id": "cnt_01HX...",
+  "data": {
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "title": "VP of Engineering",
+    "email": "jane.smith@acme.com",
+    "company_name": "Acme Corp",
+    "company_domain": "acme.com",
+    "seniority": "vp",
+    "departments": ["engineering"]
+  }
+}
+```
+
+<ResponseField name="status" type="string">
+  Indicates whether enrichment succeeded. See status values below.
+</ResponseField>
+
+<ResponseField name="contact_id" type="string">
+  The Knock2 contact identifier for the enriched person. Present when `status` is `enriched`.
+</ResponseField>
+
+<ResponseField name="data.first_name" type="string">
+  The contact's first name.
+</ResponseField>
+
+<ResponseField name="data.last_name" type="string">
+  The contact's last name.
+</ResponseField>
+
+<ResponseField name="data.title" type="string">
+  The contact's job title.
+</ResponseField>
+
+<ResponseField name="data.email" type="string">
+  The email address that was enriched, echoed back in the response.
+</ResponseField>
+
+<ResponseField name="data.company_name" type="string">
+  The name of the company the contact is associated with.
+</ResponseField>
+
+<ResponseField name="data.company_domain" type="string">
+  The primary domain of the contact's company.
+</ResponseField>
+
+<ResponseField name="data.seniority" type="string">
+  The contact's seniority level (e.g. `vp`, `director`, `manager`, `ic`).
+</ResponseField>
+
+<ResponseField name="data.departments" type="array of strings">
+  The functional departments the contact belongs to (e.g. `["engineering"]`, `["sales", "marketing"]`).
+</ResponseField>
+
+## Status Values
+
+| Status | Meaning |
+|---|---|
+| `enriched` | Data was found — the `data` object is populated. 1 credit is deducted. |
+| `not_found` | No vendors in the enrichment waterfall returned a match. No credit is deducted. |
+
+## Credits
+
+Each call that returns `status: enriched` costs **1 credit**. Calls that return `not_found` are free. If your account has reached its credit limit, Knock2 returns a `402` error. You can view your remaining credits and purchase additional ones in the Knock2 dashboard.
+
+## Required Scope
+
+This endpoint requires the `enrichment:write` scope (or the broader `all:write` scope) on your API key. Keys that lack this scope receive a `403` error.
+
+## Error Responses
+
+| Status | Meaning |
+|---|---|
+| `401` | Missing or invalid API key. |
+| `402` | Credit limit reached. Add more credits in the Knock2 dashboard to continue enriching contacts. |
+| `403` | Your API key does not have the `enrichment:write` scope required for this endpoint. |
+| `422` | The request body is malformed or the `email` field is not a valid email address. |
+| `429` | Rate limit exceeded. Slow down your request rate and retry. |

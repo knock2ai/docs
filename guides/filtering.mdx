@@ -1,0 +1,245 @@
+---
+title: "Query Knock2 Accounts and Contacts with API Filters"
+sidebarTitle: "Filtering"
+description: "Learn how to apply inline filters and saved filter sets when querying accounts and contacts to return only the records that matter to your team."
+---
+
+Knock2's filtering system gives you precise control over which accounts and contacts are returned from list endpoints. Whether you need a quick one-off query scoped to a single industry or a complex multi-condition filter you reuse across your automation workflows, Knock2 supports both patterns through inline filters and saved filter sets.
+
+## Two Filtering Approaches
+
+**Inline filters** are the simplest way to narrow a result set. You pass a `filters` query parameter containing a JSON array of filter objects directly in your request URL. Inline filters are ideal for ad-hoc queries or when the filter conditions are dynamic and change per request.
+
+**Filter sets** let you save a named filter configuration once — via `POST /v1/filter-sets` — and reuse it across multiple requests by referencing its `filter_set_id`. Filter sets are recommended for complex, multi-condition criteria that your team uses regularly, such as "all enterprise accounts in the software industry that visited the pricing page in the last 30 days."
+
+<Note>
+  `filters` and `filter_set_id` are **not** mutually exclusive — you can pass both on the same request. When you do, the saved filter set's conditions are used as the base and your inline `filters` are appended on top (both must match, as with any other combination of filters).
+</Note>
+
+## Inline Filter Example
+
+Pass a `filters` query parameter as a URL-encoded JSON array. Each element in the array is a filter object with `key`, `keyType`, `condition`, and `value` fields.
+
+```bash
+curl "https://api.knock2.ai/v1/accounts?filters=%5B%7B%22key%22%3A%22industry%22%2C%22keyType%22%3A%22string_arr%22%2C%22condition%22%3A%22is_one_of%22%2C%22value%22%3A%5B%22Software%22%5D%7D%5D" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+The decoded `filters` value for the request above is:
+
+```json
+[
+  {
+    "key": "industry",
+    "keyType": "string_arr",
+    "condition": "is_one_of",
+    "value": ["Software"]
+  }
+]
+```
+
+<Note>
+  Always URL-encode the JSON array when passing it as a query parameter. Most HTTP client libraries handle this automatically when you pass filter values as a structured parameter rather than building the URL string manually.
+</Note>
+
+You can pass multiple filter objects in the array — Knock2 applies them as a logical `AND`, returning only records that satisfy every condition.
+
+## Filter Key Types
+
+Each filter object must include a `keyType` that tells Knock2 how to interpret the `value` field and which `condition` operators are valid. The conditions below are exhaustive — passing anything else returns a `400 invalid_filters` error naming the offending filter index.
+
+<AccordionGroup>
+  <Accordion title="string — match text fields exactly or partially">
+    Use `string` for text fields like `business_email` or `crm_deal_name`.
+
+    | Condition | Behavior |
+    | --- | --- |
+    | `is` | Exact match |
+    | `is_not` | Excludes exact matches |
+    | `contains` | Field contains the substring |
+    | `does_not_contain` | Field does not contain the substring |
+    | `starts_with` | Field begins with the given string |
+    | `ends_with` | Field ends with the given string |
+    | `exists` | Field has a value (not null/empty) |
+    | `does_not_exist` | Field is null or empty |
+    | `exclude_personal_emails` | Excludes Gmail/Yahoo/etc. addresses (email fields only, no `value` needed) |
+
+    **Example** — contacts whose title starts with "VP":
+
+    ```json
+    {
+      "key": "title",
+      "keyType": "string_searchable",
+      "condition": "starts_with",
+      "value": "VP"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="string_searchable / string_with_id — same conditions as string">
+    `string_searchable` (e.g. `title`, `company_name`) and `string_with_id` (e.g. `owner`, which pairs a display name with an ID) accept the same condition set as `string`: `is`, `is_not`, `contains`, `does_not_contain`, `starts_with`, `ends_with`, `exists`, `does_not_exist`, and (on email fields) `exclude_personal_emails`.
+  </Accordion>
+
+  <Accordion title="string_arr — match against array-valued fields">
+    Use `string_arr` for fields that hold a list of values, such as `industry` or `technology_tags`.
+
+    | Condition | Behavior |
+    | --- | --- |
+    | `is_one_of` | Record matches at least one of the provided values |
+    | `is_not_in` | Record matches none of the provided values |
+    | `exists` | Field has a value |
+    | `does_not_exist` | Field is null or empty |
+
+    **Example** — contacts with industry SaaS or Fintech:
+
+    ```json
+    {
+      "key": "company_industry",
+      "keyType": "string_arr",
+      "condition": "is_one_of",
+      "value": ["SaaS", "Fintech"]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="boolean — match true/false fields">
+    Use `boolean` for fields like `is_qualified`. A `value` of `true` or `false` is required.
+
+    | Condition | Behavior |
+    | --- | --- |
+    | `is` | Field equals the given boolean |
+    | `is_not` | Field does not equal the given boolean |
+
+    **Example** — contacts that are qualified:
+
+    ```json
+    {
+      "key": "is_qualified",
+      "keyType": "boolean",
+      "condition": "is",
+      "value": true
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="number / number_with_id — compare numeric fields">
+    Use `number` for plain numeric fields (e.g. `page_visits`, `crm_deal_value`) and `number_with_id` for numeric fields tied to a model ID (e.g. `lead_score`, which references a scoring model).
+
+    | Condition | Behavior |
+    | --- | --- |
+    | `is` | Exact numeric match |
+    | `is_not` | Not equal to the value |
+    | `gt` | Strictly greater than |
+    | `gte` | Greater than or equal to |
+    | `lt` | Strictly less than |
+    | `lte` | Less than or equal to |
+
+    There is no `between` condition for `number` — use two filters (`gte` \+ `lte`) if you need a range.
+
+    **Example** — accounts with a lead score of at least 80:
+
+    ```json
+    {
+      "key": "lead_score",
+      "keyType": "number_with_id",
+      "condition": "gte",
+      "value": 80
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="existence — check whether a field is present">
+    Use `existence` to filter on whether a field has any value at all. No `value` field is required.
+
+    | Condition | Behavior |
+    | --- | --- |
+    | `exists` | The field is present and non-null |
+    | `does_not_exist` | The field is absent or null |
+
+    **Example** — contacts that have a LinkedIn URL on record:
+
+    ```json
+    {
+      "key": "linkedin_url",
+      "keyType": "existence",
+      "condition": "exists"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="date_range — filter by date or time window">
+    Use `date_range` for timestamp fields like `last_visit` or `created_at`.
+
+    | Condition | Behavior |
+    | --- | --- |
+    | `before` | Field is before the given ISO 8601 date |
+    | `after` | Field is after the given ISO 8601 date |
+    | `between` | Field falls within an inclusive date range |
+
+    For `before`/`after`, pass `value` as a single date string. For `between`, pass a two-element array `[start, end]` (contact filters) — the second element may be `null` for an open-ended range; account filters also accept an equivalent `{start, end}` object.
+
+    **Example** — accounts whose last visit was after June 1, 2024:
+
+    ```json
+    {
+      "key": "last_visit",
+      "keyType": "date_range",
+      "condition": "after",
+      "value": "2024-06-01"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="employee_range / revenue_range — bucket-based size filters">
+    Use `employee_range` (`employees`/`company_employees`) or `revenue_range` (`annual_revenue`/`company_annual_revenue`) to filter by standardized size buckets rather than raw numbers.
+
+    | Condition | Behavior |
+    | --- | --- |
+    | `is_one_of` | Record falls in at least one of the given buckets |
+    | `is_not_in` | Record falls in none of the given buckets |
+
+    Each bucket in the `value` array is a JSON-stringified `[min, max]` tuple (use `null` for an open-ended upper bound) — not a display-label string. Check the dashboard's **Settings → API → Filter Sets Reference** tab for the exact bucket values currently configured.
+
+    **Example** — accounts with 51–200 or 201–500 employees:
+
+    ```json
+    {
+      "key": "employees",
+      "keyType": "employee_range",
+      "condition": "is_one_of",
+      "value": ["[51,200]", "[201,500]"]
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Using a Saved Filter Set
+
+Create a reusable filter set by `POST`ing your filter array to `/v1/filter-sets`:
+
+```bash
+curl -X POST https://api.knock2.ai/v1/filter-sets \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Enterprise Software Accounts",
+    "type": "account",
+    "filters": [
+      { "key": "industry", "keyType": "string_arr", "condition": "is_one_of", "value": ["Software"] },
+      { "key": "employees", "keyType": "employee_range", "condition": "is_one_of", "value": ["[1001,5000]", "[5001,null]"] }
+    ]
+  }'
+```
+
+Once created, pass the returned `id` as the `filter_set_id` query parameter on any list endpoint:
+
+```bash
+curl "https://api.knock2.ai/v1/contacts?filter_set_id=<uuid>" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Filter sets are available to all API keys in your account and can also be selected directly in the Knock2 dashboard's Contacts and Accounts views.
+
+<Tip>
+  For the full list of valid `key` values by filter type — including accepted enum strings for `address_country` and the exact bucket format for `employee_range`/`revenue_range` — open **Settings → API → Filter Sets Reference** in the Knock2 dashboard.
+</Tip>

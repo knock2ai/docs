@@ -1,0 +1,294 @@
+---
+title: "Provision and Manage Knock2 Sub-Tenants via the API"
+sidebarTitle: "Managing Tenants"
+description: "Step-by-step guide to creating, configuring, and deactivating Knock2 sub-tenants via the API, including script installation for each tenant."
+---
+
+Once your parent API key has the `tenants:write` scope, you can provision fully isolated Knock2 workspaces for your clients entirely through the API — no manual dashboard work required. This guide walks you through the complete lifecycle of a sub-tenant: creating it, grabbing its tracking snippet, giving it a credit allocation, deactivating and reactivating it, and reading its data directly from your own parent key.
+
+## Create a tenant
+
+<Steps>
+  <Step title="POST to /v1/tenants with your parent API key">
+    Send a `POST` request to the tenants endpoint, authenticated with your master key. `name` and `domain` are required. The optional `overview` field accepts a plain-English description of the tenant's business — Knock2 uses it to improve visitor identification accuracy for that workspace. You no longer choose a `product_slug` — it's derived server-side from `domain` (see below). You can also pass an optional `scoring_config` object here to set the tenant's Buyer Persona in the same call — see [Configure lead scoring for a tenant](#configure-lead-scoring-for-a-tenant) below — and an optional `script_config` object to set its tracking-script exclusions — see [Exclude pages from the tracking script](#exclude-pages-from-the-tracking-script) below.
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST https://api.knock2.ai/v1/tenants \
+      -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Acme Corp",
+        "domain": "acme.com",
+        "overview": "B2B SaaS company selling project management tools"
+      }'
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Store the returned api_key immediately">
+    A successful `201 Created` response returns the new tenant's server-derived `product_slug`, a unique `api_key`, and the tenant's `script_url`. The `api_key` is shown **exactly once** — persist it to your own secure storage before doing anything else.
+
+    ```json
+    {
+      "data": {
+        "product_slug": "acme_com_yourco_com",
+        "name": "Acme Corp",
+        "domain": "acme.com",
+        "script_url": "https://api.knock2.ai/install/acme_com_yourco_com",
+        "api_key": "kn_live_..."
+      }
+    }
+    ```
+
+    <Warning>
+      Save the `api_key` securely the moment you receive it. Knock2 does not store or re-expose the key after this response. If you lose it, you will need to deactivate the tenant and provision a new one.
+    </Warning>
+  </Step>
+  <Step title="Retrieve the embed snippet using the new tenant's API key">
+    Use the child tenant's newly issued `api_key` (not your parent key) to fetch the ready-to-embed script snippet for that tenant's workspace.
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl https://api.knock2.ai/v1/script \
+      -H "Authorization: Bearer kn_live_..."
+    ```
+
+    </CodeGroup>
+
+    The response contains an HTML snippet whose URL already has the tenant's `product_slug` baked in server-side — no client-side configuration needed.
+  </Step>
+  <Step title="Embed the snippet and verify installation">
+    Paste the snippet into the `<head>` of the tenant's website. For best results, place it as high in the `<head>` as possible so it loads before the page content renders.
+
+    Once deployed, confirm Knock2 is receiving signals by calling the status endpoint:
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl https://api.knock2.ai/v1/script/status \
+      -H "Authorization: Bearer kn_live_..."
+    ```
+
+    </CodeGroup>
+
+    An `"is_installed": true` field in the response confirms that the tracking script is firing correctly for the tenant's domain.
+
+    <Tip>
+      Run the status check as part of your automated onboarding flow so you catch installation issues the moment a new tenant goes live, rather than discovering them days later.
+    </Tip>
+  </Step>
+</Steps>
+
+## How `product_slug` is derived
+
+`product_slug` is computed server-side from the `domain` you provide, namespaced under your own account's slug — `acme.com` provisioned by a parent whose own slug is `yourco_com` becomes `acme_com_yourco_com`. Read the authoritative value from the response; a `product_slug` sent in the request body is deprecated and silently ignored (KNO-1546).
+
+This is deterministic and permanent per domain: submitting the same `domain` again returns `409 Conflict` rather than creating a second tenant. If the existing tenant for that domain is currently deactivated, the error message points you at reactivation instead (see below) — there is no way to "free up" a domain to provision a brand-new tenant for it.
+
+## Update a tenant
+
+`PATCH /v1/tenants/{product_slug}` updates a direct child's `name` and/or `domain` — `product_slug` itself is never updatable.
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH https://api.knock2.ai/v1/tenants/acme_com_yourco_com \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"domain": "acme-corp.com"}'
+```
+
+</CodeGroup>
+
+Changing `domain` is treated as a re-provisioning step, not a plain rename: Clearbit is re-registered and the tenant's Visual Visitor customer is re-pointed at the new domain, so identification doesn't silently keep resolving against the old site. The new domain is re-checked against the same domain-reservation rule that governs tenant creation, and returns `409` if it's already claimed elsewhere. See the [Update Tenant reference](/api-reference/tenants/update-tenant) for the full request/response shape.
+
+## Configure lead scoring for a tenant
+
+A tenant's Company Profile and Buyer Persona — the fields that drive lead scoring — used to be dashboard-only, which meant a programmatically provisioned tenant scored every visitor against an empty ICP until someone logged in and configured it by hand. `GET`/`PATCH /v1/tenants/{product_slug}/scoring-config` close that gap:
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH https://api.knock2.ai/v1/tenants/acme_com_yourco_com/scoring-config \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "persona_description": "VP or Director of Engineering at a Series B+ SaaS company with 50-500 employees.",
+    "company_description": "B2B SaaS companies selling to mid-market and enterprise buyers.",
+    "persona_weight": 0.6
+  }'
+```
+
+</CodeGroup>
+
+`persona_description`, `company_description`, and `persona_weight` create the tenant's Ideal Customer Profile (ICP) if one doesn't already exist yet. `name`, `category`, `overview`, and `linkedin_company_url` write to the tenant's Company Profile directly. Only fields you supply are changed — this is a partial update. You can also set these fields at creation time by passing the same shape as an optional `scoring_config` object to `POST /v1/tenants`, so a fully hands-off onboarding flow never needs a second call. See the [Get Scoring Config](/api-reference/tenants/get-scoring-config) and [Update Scoring Config](/api-reference/tenants/update-scoring-config) references for the full field list.
+
+## Exclude pages from the tracking script
+
+A tenant's Script Settings "Excluded Pages" list — URL path patterns where the tracking script should not run at all, no session and no cost — used to be dashboard-only. `GET`/`PATCH /v1/tenants/{product_slug}/script-config` expose the same setting via the API:
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH https://api.knock2.ai/v1/tenants/acme_com_yourco_com/script-config \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pages_to_ignore": ["^/careers", "^/privacy-policy"]
+  }'
+```
+
+</CodeGroup>
+
+`pages_to_ignore` replaces the tenant's entire exclusion list — this is not additive. Each pattern is validated at write time; a pattern that fails to compile as a regex returns `400` rather than being saved and silently breaking the tracking script for every visitor on the tenant's site. You can also set this at creation time via an optional `script_config` object on `POST /v1/tenants`. See the [Get Script Config](/api-reference/tenants/get-script-config) and [Update Script Config](/api-reference/tenants/update-script-config) references for the full field list.
+
+<Note>
+  This is a full exclusion — the script never initializes on a matching page. If you need visitors on a page tracked but excluded only from the paid identification lookup, this setting does not do that; contact support to discuss options.
+</Note>
+
+## Deactivate a tenant
+
+When a client relationship ends, a contract expires, or you need to clean up a test tenant, send a `DELETE` request to the tenant's slug path, authenticated with your **parent** API key.
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.knock2.ai/v1/tenants/acme_com_yourco_com \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+</CodeGroup>
+
+A **`204 No Content`** response confirms the deactivation. Deactivation is a **soft delete**: the tracking script immediately stops firing and visitor identification halts for that domain, and the tenant's own API key starts getting `402 Payment Required` on every `/v1` route — but it is not revoked, and the tenant's historical visitor data is retained. No data is permanently destroyed on deactivation.
+
+## Reactivate a tenant
+
+Because `product_slug` is deterministic, reactivation — not a fresh `POST /v1/tenants` call — is the only way back for a domain whose tenant was previously deactivated. Call `POST /v1/tenants/{product_slug}/activate` with the same parent key that deactivated it:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.knock2.ai/v1/tenants/acme_com_yourco_com/activate \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+</CodeGroup>
+
+This restores the tracking script, visitor identification, and the tenant's Visual Visitor plan. The original `api_key` — never revoked in the first place — resumes working immediately, no re-issuing needed. See the [Reactivate Tenant reference](/api-reference/tenants/activate-tenant) for the full response shape.
+
+## Give a child tenant a credit allocation
+
+`PUT /v1/tenants/{product_slug}/limits` gives a direct child a slice of your own credit pool — by `credits`, `contacts`, or `accounts`, over a `billing_period`, `month`, `week`, `day`, or `lifetime` window:
+
+<CodeGroup>
+
+```bash cURL
+curl -X PUT https://api.knock2.ai/v1/tenants/acme_com_yourco_com/limits \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "limits": [
+      {"type": "credits", "value": 100, "period": "lifetime"},
+      {"type": "contacts", "value": 10, "period": "week"}
+    ]
+  }'
+```
+
+</CodeGroup>
+
+Values are always in natural units for the chosen `type` — the API reports the credit-equivalent alongside used/remaining in the response. You can also set an initial allocation at provisioning time via `POST /v1/tenants`'s optional `limits` field, instead of a separate `PUT` call.
+
+Lowering a limit below current usage takes effect immediately — the tenant is blocked on its next check. Over-allocating across children (allocating more, in aggregate, than your own plan's credit limit) is allowed by design; `GET /v1/tenants` returns `allocated_total_credits` alongside your own `plan_credits` so you can see the ratio (only `credits`-type allocations with `is_enforced: true` count toward that sum — a non-enforced or `contacts`/`accounts`-type allocation isn't included). Subscribe to the `tenant.limit_reached` webhook event **on your own parent key** (see the [Webhooks guide](/guides/webhooks)) to be notified the moment a child exhausts its allocation — a subscription registered under the child's own key will not receive this event.
+
+`GET /v1/tenants/{product_slug}/limits` reads the current allocation set back, and `DELETE /v1/tenants/{product_slug}/limits` clears it entirely, making the tenant unlimited within your own pool again. `GET /v1/tenants/{product_slug}/usage?period=month` (or `week`/`day`/`lifetime`/`billing_period`, the default) returns that tenant's own usage for a window — never its parent's or siblings'.
+
+Only a tenant with `billing_mode: "self"` (a tenant paying its own bill directly, rather than rolling up to your subscription) rejects limit writes with `400` — a parent allocation is meaningless for a self-billed child.
+
+## Reading a child tenant's data
+
+A parent key can read one direct child's account, contact, activity, and score data directly — no need to hold a separate key per tenant. Add an `X-Knock-Tenant` header (or `?product_slug=` query param — the header takes precedence if both are present) to any of:
+
+- `GET /v1/accounts`, `GET /v1/accounts/{id}`
+- `GET /v1/contacts`, `GET /v1/contacts/{id}`
+- `GET /v1/activity`
+- `GET /v1/scores`, `GET /v1/scores/recent`
+- `GET /v1/script`, `GET /v1/script/status`
+- `GET /v1/webhooks`, `GET /v1/webhooks/{id}/secret`
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.knock2.ai/v1/contacts \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY" \
+  -H "X-Knock-Tenant: acme_com_yourco_com"
+```
+
+</CodeGroup>
+
+Omit the header/param entirely to read your own key's tenant, exactly as before this existed. Naming a slug that isn't a **direct** child of your key returns `404`, not `403` — the API never confirms or denies whether a slug belongs to someone else. Billing, rate limiting, and request logging stay attributed to the authenticating (parent) key regardless of which tenant's data was read — only the data query itself is redirected. A `filter_set_id` passed alongside the header/param must belong to the tenant being read, not your own.
+
+Webhooks are the one place this extends to a write, not just a read: `POST /v1/webhooks` and `DELETE /v1/webhooks/{id}` also honor `X-Knock-Tenant`/`?product_slug=`, so a parent key can register or remove a webhook on behalf of a specific child — the subscription is created under that child's own tenant, and only that child's events go to the given URL. This is different from registering a webhook under your own parent slug (no header at all), which instead fans out to every child automatically — use the per-child header when you want a specific child's events routed to a specific URL, and a parent-level subscription when one URL should hear from all of them.
+
+## List and inspect your child tenants
+
+`GET /v1/tenants` lists your direct children with their current allocation sets and usage in one call; `GET /v1/tenants/{product_slug}` returns a single one (your own tenant, or a direct child).
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.knock2.ai/v1/tenants \
+  -H "Authorization: Bearer YOUR_PARENT_API_KEY"
+```
+
+</CodeGroup>
+
+Both require the `tenants:read` scope. See the [List Tenants](/api-reference/tenants/list-tenants) and [Get Tenant](/api-reference/tenants/get-tenant) references for the full response shape.
+
+## Authorization: only manage your own tenants
+
+Every tenant-scoped endpoint enforces strict ownership checks: acting on a tenant that was **not** provisioned by your parent API key (or, for cross-tenant reads, isn't a direct child) returns **`404 Not Found`** — the same response as for a `product_slug` that doesn't exist at all. Each parent tenant can only see and manage the child tenants it created.
+
+## Bulk provisioning
+
+If you need to onboard many clients at once, loop through your client list and call the create endpoint sequentially. Collect and persist each returned API key before moving on to the next client.
+
+<CodeGroup>
+
+```javascript Node.js
+async function provisionTenants(parentKey, clients) {
+  const results = [];
+
+  for (const client of clients) {
+    const res = await fetch('https://api.knock2.ai/v1/tenants', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${parentKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(client)
+    });
+
+    const data = await res.json();
+
+    // Save data.data.api_key immediately for each tenant —
+    // it will not be retrievable after this point.
+    results.push({
+      slug: data.data.product_slug,
+      key: data.data.api_key
+    });
+  }
+
+  return results;
+}
+```
+
+</CodeGroup>
+
+Pass `provisionTenants` your parent API key and an array of client objects, each shaped like the request body from the [Create a tenant](#create-a-tenant) section above (`{ name, domain, overview? }` — no `product_slug`, since it's derived from `domain`). The function returns an array of `{ slug, key }` pairs — write these to your database or secrets manager before the function returns.
+
+<Warning>
+  Do not provision tenants in parallel (`Promise.all`) unless you are certain your storage layer can handle concurrent writes atomically. A race condition that drops even one `api_key` before it is persisted means that tenant's key is unrecoverable.
+</Warning>
