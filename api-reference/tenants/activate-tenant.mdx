@@ -29,7 +29,7 @@ curl -X POST https://api.knock2.ai/v1/tenants/acme_com_yourco_com/activate \
 
 Because `product_slug` is deterministically derived from `domain` (KNO-1546), `POST /v1/tenants` permanently `409`s for a domain that already has a tenant record — even a deactivated one. This endpoint is therefore the **only** self-service way back for that domain; there is no way to provision a brand-new tenant in its place.
 
-Reactivation sets `is_product_slug_active = TRUE`, restores the tenant's Visual Visitor plan, and re-enables the tracking script and visitor identification. The tenant's original API key was never revoked, so it resumes working immediately with no re-issuing step.
+Reactivation sets `is_product_slug_active = TRUE`, restores the tenant's paid identification plan, and re-enables the tracking script and visitor identification. The tenant's original API key was never revoked, so it resumes working immediately with no re-issuing step.
 
 ## Response
 
