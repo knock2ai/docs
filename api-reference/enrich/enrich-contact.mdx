@@ -1,25 +1,27 @@
 ---
-title: "POST /v1/enrich — Enrich a Contact by Email"
+title: "POST /v1/enrich — Enrich a Contact by Email or LinkedIn URL"
 sidebarTitle: "Enrich Contact"
-description: "POST /v1/enrich looks up an email address and returns a merged contact profile. Costs 1 credit per match. Requires the enrichment:write scope."
+description: "POST /v1/enrich looks up a contact by email or LinkedIn URL and returns a merged contact profile. Costs 1 credit per match. Requires the enrichment:write scope."
 ---
 
-`POST /v1/enrich` runs an email address through Knock2's enrichment waterfall — querying multiple data vendors in sequence and merging the results into a single unified contact profile. You get back fields like job title, seniority, department, and company details in one call. Each successful enrichment costs 1 credit from your account balance, so Knock2 only charges you when data is actually found.
+`POST /v1/enrich` runs an email address and/or LinkedIn URL through Knock2's enrichment waterfall — querying multiple sources in sequence and merging the results into a single unified contact profile. You get back fields like job title, seniority, department, and company details in one call. Each successful enrichment costs 1 credit from your account balance, so Knock2 only charges you when data is actually found.
 
 ## Endpoint
 
-```
+```text
 POST https://api.knock2.ai/v1/enrich
 ```
 
 ## Request Body
 
-<ParamField body="email" type="string" required>
+At least one of `email` or `linkedin_url` is required.
+
+<ParamField body="email" type="string">
   The email address of the contact you want to enrich. Must be a valid email format.
 </ParamField>
 
 <ParamField body="linkedin_url" type="string">
-  The LinkedIn profile URL for the contact (e.g. `https://linkedin.com/in/janesmith`). Providing this improves match quality and increases the likelihood of a successful enrichment.
+  The LinkedIn profile URL for the contact (e.g. `https://linkedin.com/in/janesmith`). Can be used on its own to enrich a contact with no email on file, or provided alongside `email` to improve match quality.
 </ParamField>
 
 ## Example Request
@@ -95,9 +97,9 @@ A successful request returns `200 OK` with an `EnrichResponse` body.
 ## Status Values
 
 | Status | Meaning |
-|---|---|
+| --- | --- |
 | `enriched` | Data was found — the `data` object is populated. 1 credit is deducted. |
-| `not_found` | No vendors in the enrichment waterfall returned a match. No credit is deducted. |
+| `not_found` | No sources in the enrichment waterfall returned a match. No credit is deducted. |
 
 ## Credits
 
@@ -110,9 +112,9 @@ This endpoint requires the `enrichment:write` scope (or the broader `all:write` 
 ## Error Responses
 
 | Status | Meaning |
-|---|---|
+| --- | --- |
 | `401` | Missing or invalid API key. |
-| `402` | Credit limit reached. Add more credits in the Knock2 dashboard to continue enriching contacts. |
+| `402` | Credit limit reached, or workspace deactivated. Add more credits or reactivate in the Knock2 dashboard to continue enriching contacts. |
 | `403` | Your API key does not have the `enrichment:write` scope required for this endpoint. |
-| `422` | The request body is malformed or the `email` field is not a valid email address. |
+| `422` | Neither `email` nor `linkedin_url` was provided, or `email` is not a valid email address. |
 | `429` | Rate limit exceeded. Slow down your request rate and retry. |

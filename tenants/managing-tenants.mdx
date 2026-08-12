@@ -103,7 +103,7 @@ curl -X PATCH https://api.knock2.ai/v1/tenants/acme_com_yourco_com \
 
 </CodeGroup>
 
-Changing `domain` is treated as a re-provisioning step, not a plain rename: Clearbit is re-registered and the tenant's Visual Visitor customer is re-pointed at the new domain, so identification doesn't silently keep resolving against the old site. The new domain is re-checked against the same domain-reservation rule that governs tenant creation, and returns `409` if it's already claimed elsewhere. See the [Update Tenant reference](/api-reference/tenants/update-tenant) for the full request/response shape.
+Changing `domain` is treated as a re-provisioning step, not a plain rename: the tenant's identification providers are re-pointed at the new domain, so identification doesn't silently keep resolving against the old site. The new domain is re-checked against the same domain-reservation rule that governs tenant creation, and returns `409` if it's already claimed elsewhere. See the [Update Tenant reference](/api-reference/tenants/update-tenant) for the full request/response shape.
 
 ## Configure lead scoring for a tenant
 
@@ -177,7 +177,7 @@ curl -X POST https://api.knock2.ai/v1/tenants/acme_com_yourco_com/activate \
 
 </CodeGroup>
 
-This restores the tracking script, visitor identification, and the tenant's Visual Visitor plan. The original `api_key` — never revoked in the first place — resumes working immediately, no re-issuing needed. See the [Reactivate Tenant reference](/api-reference/tenants/activate-tenant) for the full response shape.
+This restores the tracking script, visitor identification, and the tenant's paid identification plan. The original `api_key` — never revoked in the first place — resumes working immediately, no re-issuing needed. See the [Reactivate Tenant reference](/api-reference/tenants/activate-tenant) for the full response shape.
 
 ## Give a child tenant a credit allocation
 
