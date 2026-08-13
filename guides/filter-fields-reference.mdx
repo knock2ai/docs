@@ -152,5 +152,5 @@ For `annual_revenue` and `company_annual_revenue`, pass an array of JSON-stringi
 ```
 
 <Note>
-  Both range buckets are fixed sets — you cannot pass an arbitrary `[min, max]` tuple that isn't one of the values listed above. A tuple that doesn't exactly match a bucket returns a `400 invalid_filters` error.
+  These are the standard buckets used by the dashboard's own filter builder, but the API does not strictly enforce them — `employee_range`/`revenue_range` filtering is a numeric range-overlap comparison, so a non-standard `[min, max]` tuple (e.g. `"[15,42]"`) is still evaluated rather than rejected. A malformed (non-JSON) string in the array is silently skipped rather than returning an error, so double-check your encoding if a filter of this type doesn't behave as expected.
 </Note>

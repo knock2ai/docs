@@ -23,7 +23,7 @@ POST /v1/prospect
 </ParamField>
 
 <ParamField header="X-Knock-Tenant" type="string">
-  Prospect on behalf of a direct child tenant instead of your own. Takes precedence over `?product_slug=`. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenant-s-data).
+  Prospect on behalf of a direct child tenant instead of your own. Takes precedence over `?product_slug=`. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenants-data).
 </ParamField>
 
 ### Example
@@ -121,7 +121,8 @@ curl -X POST https://api.knock2.ai/v1/prospect \
 | --- | --- | --- |
 | `400` | `missing_parameter` | `account_id` is missing from the request body. |
 | `400` | `no_roles_configured` | No `roles` were passed and no buying-committee roles are configured for this tenant. Configure roles in **Settings → Buying Committee**, or pass `roles` explicitly on the call. |
-| `402` | `credit_limit_exceeded` | Website or contact identification credits are exhausted for the billing period, or the workspace is deactivated. |
+| `402` | `credit_limit_exceeded` | Website or contact identification credits are exhausted for the billing period. |
+| `402` | `account_inactive` | The workspace has been deactivated. This check runs on every `/v1` route, not just this one. |
 | `403` | `forbidden` | API key is missing the `prospecting:write` scope. |
 | `403` | `locked` | The account has been identified but not yet revealed. |
 | `404` | `not_found` | `account_id` is a UUID that doesn't resolve to an existing account for this tenant. A bare domain never 404s — it auto-creates instead. |
