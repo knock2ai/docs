@@ -37,7 +37,9 @@
               "guides/webhooks",
               "guides/enrichment",
               "guides/filtering",
-              "guides/pagination"
+              "guides/pagination",
+              "guides/prospecting",
+              "guides/filter-fields-reference"
             ]
           },
           {
@@ -102,7 +104,8 @@
             "group": "Enrichment & Auth",
             "pages": [
               "api-reference/enrich/enrich-contact",
-              "api-reference/auth/verify-key"
+              "api-reference/auth/verify-key",
+              "api-reference/prospect/prospect-contacts"
             ]
           },
           {

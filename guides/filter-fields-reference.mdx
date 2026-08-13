@@ -1,0 +1,156 @@
+---
+title: "Complete Reference: Filterable Fields, keyTypes, and Enum Values"
+sidebarTitle: "Filter Fields Reference"
+description: "The complete list of filterable fields for accounts and contacts, their keyTypes, and the exact enum values accepted for address_country, employee_range, and revenue_range filters."
+---
+
+This page is the exhaustive reference for [filtering](/guides/filtering) accounts and contacts: every valid `key`, its fixed `keyType`, and — for the three enum-backed keyTypes — the exact values the API accepts. The `keyType` for a given `key` is fixed; passing a different one returns a `400` validation error.
+
+## Account Filter Keys (<code>type: "account"</code>)
+
+| key | keyType | Description |
+| --- | --- | --- |
+| `name` | `string_searchable` | Company name |
+| `domain` | `string_pattern` | Company domain (e.g. `acme.com`) |
+| `industry` | `string_arr` | Industry category |
+| `sector` | `string_arr` | Sector category |
+| `address_state` | `string_arr` | State / province |
+| `address_city` | `string_searchable` | City |
+| `address_country` | `string_arr` | Country — see [enum values](#country-values) |
+| `annual_revenue` | `revenue_range` | Annual revenue bracket — see [enum values](#revenue-range-values) |
+| `employees` | `employee_range` | Employee count bracket — see [enum values](#employee-range-values) |
+| `tags` | `string_arr` | Custom tags |
+| `technology_tags` | `string_arr` | Technology tags (e.g. HubSpot, Salesforce) |
+| `created_at` | `date_range` | Date the account was first identified |
+| `last_visit` | `date_range` | Date of the most recent website visit |
+| `page_visits` | `number` | Total page view count |
+| `pages_visited` | `string_arr` | Array of page URLs visited |
+| `last_page` | `string_arr` | Most recently visited page URL |
+| `browsing_time` | `number` | Total browsing time in seconds |
+| `lead_score` | `number_with_id` | Lead score — requires a scoring model ID |
+| `owner` | `string_with_id` | Assigned owner — requires an owner ID |
+| `utm_source` | `string_arr` | UTM source values |
+| `utm_medium` | `string_arr` | UTM medium values |
+| `utm_campaign` | `string_searchable` | UTM campaign values |
+| `utm_term` | `string_searchable` | UTM term values |
+| `utm_content` | `string_searchable` | UTM content values |
+| `document_referrer` | `string_pattern` | Referrer URL |
+| `crm_deal_source` | `string_arr` | CRM deal source |
+| `crm_deal_name` | `string` | CRM deal name |
+| `crm_deal_stage` | `string_arr` | CRM deal stage |
+| `crm_deal_value` | `number` | CRM deal value (USD) |
+| `crm_deal_close_date` | `date_range` | CRM deal close date |
+| `crm_deal_owner_name` | `string_arr` | CRM deal owner name |
+| `crm_deal_owner_email` | `string_arr` | CRM deal owner email |
+| `crm_company_owner_name` | `string_arr` | CRM company owner name |
+| `crm_company_owner_email` | `string_arr` | CRM company owner email |
+
+## Contact Filter Keys (<code>type: "contact"</code>)
+
+| key | keyType | Description |
+| --- | --- | --- |
+| `name` | `string_searchable` | Full name |
+| `title` | `string_searchable` | Job title |
+| `business_email` | `string` | Work email address |
+| `personal_email` | `string` | Personal email address |
+| `address_state` | `string_arr` | State / province |
+| `address_city` | `string_searchable` | City |
+| `address_country` | `string_arr` | Country — see [enum values](#country-values) |
+| `company_name` | `string_arr` | Associated company name |
+| `company_domain` | `string_pattern` | Associated company domain |
+| `company_industry` | `string_arr` | Associated company industry |
+| `company_sector` | `string_arr` | Associated company sector |
+| `company_address_state` | `string_arr` | Company state / province |
+| `company_address_city` | `string_searchable` | Company city |
+| `company_address_country` | `string_arr` | Company country — see [enum values](#country-values) |
+| `company_annual_revenue` | `revenue_range` | Company annual revenue bracket — see [enum values](#revenue-range-values) |
+| `company_employees` | `employee_range` | Company employee count bracket — see [enum values](#employee-range-values) |
+| `company_tags` | `string_arr` | Company custom tags |
+| `company_technology_tags` | `string_arr` | Company technology tags |
+| `created_at` | `date_range` | Date the contact was first identified |
+| `last_visit` | `date_range` | Date of the most recent website visit |
+| `page_visits` | `number` | Total page view count |
+| `pages_visited` | `string_arr` | Array of page URLs visited |
+| `last_page` | `string_arr` | Most recently visited page URL |
+| `browsing_time` | `number` | Total browsing time in seconds |
+| `lead_score` | `number_with_id` | Lead score — requires a scoring model ID |
+| `owner` | `string_with_id` | Assigned owner — requires an owner ID |
+| `utm_source` | `string_arr` | UTM source values |
+| `utm_medium` | `string_arr` | UTM medium values |
+| `utm_campaign` | `string_searchable` | UTM campaign values |
+| `utm_term` | `string_searchable` | UTM term values |
+| `utm_content` | `string_searchable` | UTM content values |
+| `document_referrer` | `string_pattern` | Referrer URL |
+| `crm_deal_source` | `string_arr` | CRM deal source |
+| `crm_deal_name` | `string` | CRM deal name |
+| `crm_deal_stage` | `string_arr` | CRM deal stage |
+| `crm_deal_value` | `number` | CRM deal value (USD) |
+| `crm_deal_close_date` | `date_range` | CRM deal close date |
+| `crm_deal_owner_name` | `string_arr` | CRM deal owner name |
+| `crm_deal_owner_email` | `string_arr` | CRM deal owner email |
+| `crm_company_owner_name` | `string_arr` | CRM company owner name |
+| `crm_company_owner_email` | `string_arr` | CRM company owner email |
+
+<Note>
+  `string_with_id` and `number_with_id` fields (`owner`, `lead_score`) require an ID value, not a display name — there is currently no lookup endpoint to resolve a display name to its ID. ID-resolution endpoints are planned for a future release.
+</Note>
+
+## Country Values
+
+For `address_country` and `company_address_country`, pass an array of country name strings from this exact list — full English names, matching Knock2's enrichment output. `United States` and `Canada` are listed first; the remainder is alphabetical.
+
+```json
+["United States", "Canada", "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"]
+```
+
+## Employee Range Values
+
+For `employees` and `company_employees`, pass an array of JSON-stringified `[min, max]` tuples — not the display label. Use `null` for the open-ended upper bound.
+
+| Display | Value to pass |
+| --- | --- |
+| 1-10 | `"[1,10]"` |
+| 11-50 | `"[11,50]"` |
+| 51-100 | `"[51,100]"` |
+| 101-250 | `"[101,250]"` |
+| 251-500 | `"[251,500]"` |
+| 501-1K | `"[501,1000]"` |
+| 1K-5K | `"[1001,5000]"` |
+| 5K-10K | `"[5001,10000]"` |
+| 10K\+ | `"[10001,null]"` |
+
+```json
+{
+  "key": "employees",
+  "keyType": "employee_range",
+  "condition": "is_one_of",
+  "value": ["[51,100]", "[101,250]"]
+}
+```
+
+## Revenue Range Values
+
+For `annual_revenue` and `company_annual_revenue`, pass an array of JSON-stringified `[min, max]` tuples in raw dollars — not the display label. Use `null` for the open-ended upper bound.
+
+| Display | Value to pass |
+| --- | --- |
+| \$0–\$1M | `"[0,1000000]"` |
+| \$1M–\$10M | `"[1000000,10000000]"` |
+| \$10M–\$50M | `"[10000000,50000000]"` |
+| \$50M–\$100M | `"[50000000,100000000]"` |
+| \$100M–\$500M | `"[100000000,500000000]"` |
+| \$500M–\$1B | `"[500000000,1000000000]"` |
+| \$1B\+ | `"[1000000000,null]"` |
+
+```json
+{
+  "key": "annual_revenue",
+  "keyType": "revenue_range",
+  "condition": "is_one_of",
+  "value": ["[100000000,500000000]", "[500000000,1000000000]"]
+}
+```
+
+<Note>
+  Both range buckets are fixed sets — you cannot pass an arbitrary `[min, max]` tuple that isn't one of the values listed above. A tuple that doesn't exactly match a bucket returns a `400 invalid_filters` error.
+</Note>

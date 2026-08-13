@@ -1,0 +1,129 @@
+---
+title: "POST /v1/prospect — Source New Contacts at an Account"
+sidebarTitle: "Prospect Contacts"
+description: "POST /v1/prospect sources new contacts (e.g. a decision maker) at an account using the buying-committee engine. Bills 2 credits per new contact found. Requires the prospecting:write scope."
+---
+
+## Request
+
+```http
+POST /v1/prospect
+```
+
+<ParamField body="account_id" type="string" required>
+  A `company_leads` UUID (an account already identified from site traffic) or a bare domain. An unknown domain auto-creates a minimal account record, unbilled.
+</ParamField>
+
+<ParamField body="roles" type="string[]">
+  An ad-hoc list of roles/titles to search for on this call only (e.g. `["Property Manager", "VP of Operations"]`). When omitted, uses the tenant's saved buying-committee configuration. Cleaned server-side (trimmed, deduped, capped at 10 entries).
+</ParamField>
+
+<ParamField body="max_contacts" type="integer">
+  Caps how many new contacts this call will source. When omitted, uses the tenant's configured default.
+</ParamField>
+
+<ParamField header="X-Knock-Tenant" type="string">
+  Prospect on behalf of a direct child tenant instead of your own. Takes precedence over `?product_slug=`. See [Reading a Child Tenant's Data](/tenants/managing-tenants#reading-a-child-tenant-s-data).
+</ParamField>
+
+### Example
+
+```bash
+curl -X POST https://api.knock2.ai/v1/prospect \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "acme.com",
+    "roles": ["Property Manager"],
+    "max_contacts": 3
+  }'
+```
+
+## Response
+
+<ResponseField name="account_id" type="string">
+  The UUID of the account that was prospected — the resolved ID even when `account_id` was passed as a domain.
+</ResponseField>
+
+<ResponseField name="account_created" type="boolean">
+  `true` when `account_id` was an unrecognized domain and a new account record was auto-created to prospect against.
+</ResponseField>
+
+<ResponseField name="contacts_found" type="integer">
+  Count of genuinely new contacts sourced by this run.
+</ResponseField>
+
+<ResponseField name="contacts_already_existed" type="integer">
+  Count of buying-committee contacts that were already on file for this account before this call.
+</ResponseField>
+
+<ResponseField name="credits_charged" type="integer">
+  `2 × contacts_found`. A run that finds nothing new costs nothing.
+</ResponseField>
+
+<ResponseField name="contacts" type="object[]">
+  The newly-found contacts.
+
+  <Expandable title="contact fields">
+    <ResponseField name="id" type="string">
+      The new contact's UUID.
+    </ResponseField>
+
+    <ResponseField name="first_name" type="string | null">
+    </ResponseField>
+
+    <ResponseField name="last_name" type="string | null">
+    </ResponseField>
+
+    <ResponseField name="email" type="string | null">
+    </ResponseField>
+
+    <ResponseField name="title" type="string | null">
+    </ResponseField>
+
+    <ResponseField name="linkedin_url" type="string | null">
+    </ResponseField>
+
+    <ResponseField name="role_searched" type="string | null">
+      The role/title query that matched this contact.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```json
+{
+  "account_id": "550e8400-e29b-41d4-a716-446655440000",
+  "account_created": false,
+  "contacts_found": 2,
+  "contacts_already_existed": 3,
+  "credits_charged": 4,
+  "contacts": [
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "email": "jane@acme.com",
+      "title": "Property Manager",
+      "linkedin_url": "https://linkedin.com/in/janedoe",
+      "role_searched": "Property Manager"
+    }
+  ]
+}
+```
+
+<Note>
+  Some contacts may arrive slightly after this response — Moltsets results are queued rather than returned inline for this endpoint. Poll [`GET /v1/contacts`](/api-reference/contacts/list-contacts) filtered by `account_id` to pick up stragglers.
+</Note>
+
+## Errors
+
+| Status | `code` | Meaning |
+| --- | --- | --- |
+| `400` | `missing_parameter` | `account_id` is missing from the request body. |
+| `400` | `no_roles_configured` | No `roles` were passed and no buying-committee roles are configured for this tenant. Configure roles in **Settings → Buying Committee**, or pass `roles` explicitly on the call. |
+| `402` | `credit_limit_exceeded` | Website or contact identification credits are exhausted for the billing period, or the workspace is deactivated. |
+| `403` | `forbidden` | API key is missing the `prospecting:write` scope. |
+| `403` | `locked` | The account has been identified but not yet revealed. |
+| `404` | `not_found` | `account_id` is a UUID that doesn't resolve to an existing account for this tenant. A bare domain never 404s — it auto-creates instead. |
+
+Requires the **`prospecting:write`** scope (or the broader **`all:write`** scope). This scope is not granted by default to keys provisioned for child tenants — a parent must explicitly select it when creating a key.

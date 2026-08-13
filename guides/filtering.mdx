@@ -198,7 +198,7 @@ Each filter object must include a `keyType` that tells Knock2 how to interpret t
     | `is_one_of` | Record falls in at least one of the given buckets |
     | `is_not_in` | Record falls in none of the given buckets |
 
-    Each bucket in the `value` array is a JSON-stringified `[min, max]` tuple (use `null` for an open-ended upper bound) — not a display-label string. Check the dashboard's **Settings → API → Filter Sets Reference** tab for the exact bucket values currently configured.
+    Each bucket in the `value` array is a JSON-stringified `[min, max]` tuple (use `null` for an open-ended upper bound) — not a display-label string. See the [Filter Fields Reference](/guides/filter-fields-reference#employee-range-values) for the exact bucket values.
 
     **Example** — accounts with 51–200 or 201–500 employees:
 
@@ -241,5 +241,5 @@ curl "https://api.knock2.ai/v1/contacts?filter_set_id=<uuid>" \
 Filter sets are available to all API keys in your account and can also be selected directly in the Knock2 dashboard's Contacts and Accounts views.
 
 <Tip>
-  For the full list of valid `key` values by filter type — including accepted enum strings for `address_country` and the exact bucket format for `employee_range`/`revenue_range` — open **Settings → API → Filter Sets Reference** in the Knock2 dashboard.
+  For the full list of valid `key` values by filter type — including accepted enum strings for `address_country` and the exact bucket format for `employee_range`/`revenue_range` — see the [Filter Fields Reference](/guides/filter-fields-reference).
 </Tip>
