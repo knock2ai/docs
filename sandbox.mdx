@@ -12,17 +12,17 @@ Want to see what the Knock2 API looks like before installing anything on a real 
 
 ## The sandbox key
 
-Every sandbox request uses the same published key — there's nothing to create and nothing to keep secret:
+Every sandbox request uses the same shared key — there's nothing to create and nothing to keep secret.
 
-```text
-kn_sandbox_REPLACE_WITH_PUBLISHED_KEY
-```
+<Note>
+  The sandbox is currently in limited rollout. `kn_sandbox_example` below is illustrative, not a working key — [contact us](mailto:support@knock2.ai) for the current value while general access is being rolled out.
+</Note>
 
 Pass it exactly like a real key, in the `Authorization` header:
 
 ```bash
 curl https://api.knock2.ai/v1/sandbox/accounts \
-  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"
+  -H "Authorization: Bearer kn_sandbox_example"
 ```
 
 Every sandbox endpoint lives under the `/v1/sandbox/` prefix instead of `/v1/` — nothing else about the request shape changes. A request to `/v1/sandbox/*` with a real `kn_live_...` key (or vice versa) is rejected with `401 Unauthorized`; the two are never interchangeable.
@@ -60,7 +60,7 @@ Every `GET` returns the same small, fixed dataset every time — two example acc
 
 ```bash cURL
 curl https://api.knock2.ai/v1/sandbox/contacts \
-  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"
+  -H "Authorization: Bearer kn_sandbox_example"
 ```
 
 ```python Python
@@ -68,7 +68,7 @@ import requests
 
 response = requests.get(
     "https://api.knock2.ai/v1/sandbox/contacts",
-    headers={"Authorization": "Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"},
+    headers={"Authorization": "Bearer kn_sandbox_example"},
 )
 print(response.json())
 ```
@@ -95,11 +95,11 @@ If you manage tenants on behalf of your own customers, the sandbox includes one 
 ```bash
 # Your own (parent) sandbox data
 curl https://api.knock2.ai/v1/sandbox/accounts \
-  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"
+  -H "Authorization: Bearer kn_sandbox_example"
 
 # The fixture child tenant's data instead
 curl https://api.knock2.ai/v1/sandbox/accounts \
-  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY" \
+  -H "Authorization: Bearer kn_sandbox_example" \
   -H "X-Knock-Tenant: sandbox-child-eu"
 ```
 
@@ -113,7 +113,7 @@ The one thing you can't fully dry-run against fixture data alone is your own web
 
 ```bash cURL
 curl -X POST https://api.knock2.ai/v1/sandbox/webhooks/test \
-  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY" \
+  -H "Authorization: Bearer kn_sandbox_example" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://your-app.example.com/webhooks/knock2",
@@ -126,7 +126,7 @@ import requests
 
 response = requests.post(
     "https://api.knock2.ai/v1/sandbox/webhooks/test",
-    headers={"Authorization": "Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"},
+    headers={"Authorization": "Bearer kn_sandbox_example"},
     json={
         "url": "https://your-app.example.com/webhooks/knock2",
         "event_type": "contact.identified",
