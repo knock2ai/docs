@@ -103,7 +103,7 @@ curl https://api.knock2.ai/v1/sandbox/accounts \
   -H "X-Knock-Tenant: sandbox-child-eu"
 ```
 
-Call `GET /v1/sandbox/tenants` to look up that child tenant's `product_slug` rather than hardcoding it.
+`sandbox-child-eu` is shown above for a concrete example — call `GET /v1/sandbox/tenants` if you'd rather look up the fixture child's `product_slug` programmatically instead of hardcoding it.
 
 ## Testing your webhook receiver
 
@@ -152,7 +152,7 @@ print(response.json())
 }
 ```
 
-The payload is signed exactly like a real delivery — verify it the same way described in [Receive Real-Time Visitor Event Alerts via Webhooks](/guides/webhooks). Nothing is stored: there's no subscription to list or delete afterward, just the one test delivery.
+The payload is signed with HMAC-SHA256 exactly like a real delivery, but there's no persisted subscription behind a sandbox test — so unlike a real webhook, there's no signing key to fetch afterward via `GET /v1/webhooks/{id}/secret`. The `signature` field above is returned directly in this response so you can compare it byte-for-byte against the `X-Knock-Signature` header your receiver actually saw. For how signature verification works end to end against a real, persisted subscription, see [Receive Real-Time Visitor Event Alerts via Webhooks](/guides/webhooks). Nothing is stored either way: there's no subscription to list or delete afterward, just the one test delivery.
 
 <Warning>
   `url` must be HTTPS and must be an endpoint **you control**. Do not point this at a third party's URL — it triggers one real outbound HTTP request from Knock2's servers.
