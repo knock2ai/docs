@@ -1,0 +1,80 @@
+---
+title: "Source New Contacts at an Account with Knock2"
+sidebarTitle: "Prospecting"
+description: "Use the Knock2 prospecting API to source new decision-maker contacts at an identified account using the same buying-committee engine as the dashboard."
+---
+
+The prospecting API lets you source new contacts — a Property Manager, a VP of Operations, whoever your buying committee configuration targets — at a specific account, on demand. It runs the same buying-committee engine behind the dashboard's "prospect additional contacts" action, so results and billing match exactly what you'd get clicking that button by hand.
+
+This is distinct from [enrichment](/guides/enrichment), which fills in more detail about _one contact you already have_. Prospecting instead _finds_ contacts you don't have yet at an account you specify.
+
+## Make a Prospecting Call
+
+Send a `POST` request to `/v1/prospect` with the account you want to source contacts at:
+
+```bash
+curl -X POST https://api.knock2.ai/v1/prospect \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"account_id": "acme.com"}'
+```
+
+`account_id` accepts either a `company_leads` UUID for an account already identified from site traffic, or a bare domain. Passing a domain that doesn't match any existing account auto-creates a minimal account record to prospect against — unbilled, since the account itself was never actually visited or enriched.
+
+## Choosing Roles
+
+With no `roles` in the request, Knock2 uses your tenant's saved buying-committee configuration (the same roles configured in the dashboard's Buying Committee settings). To search an ad-hoc list instead — for this call only, without touching your saved configuration — pass `roles` explicitly:
+
+```bash
+curl -X POST https://api.knock2.ai/v1/prospect \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "acme.com",
+    "roles": ["Property Manager", "VP of Operations"],
+    "max_contacts": 3
+  }'
+```
+
+<Note>
+  If neither the request nor your tenant configuration specifies any roles, the call returns a `400 no_roles_configured` error — there's nothing to search for.
+</Note>
+
+## Response and Billing
+
+A successful call returns which contacts were newly found versus already on file, and what was billed:
+
+```json
+{
+  "account_id": "550e8400-e29b-41d4-a716-446655440000",
+  "account_created": false,
+  "contacts_found": 2,
+  "contacts_already_existed": 3,
+  "credits_charged": 4,
+  "contacts": [
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "email": "jane@acme.com",
+      "title": "Property Manager",
+      "linkedin_url": "https://linkedin.com/in/janedoe",
+      "role_searched": "Property Manager"
+    }
+  ]
+}
+```
+
+<Tip>
+  Billing is **2 credits per newly found contact** (`credits_charged` is always `2 × contacts_found`). A run that finds nothing new — every matching contact was already on file — costs nothing.
+</Tip>
+
+Some contacts may arrive slightly after the response comes back, since results from certain vendors are queued rather than returned inline for this endpoint. Poll [`GET /v1/contacts`](/api-reference/contacts/list-contacts) filtered by `account_id` a moment later to pick up any stragglers.
+
+## Locked Accounts
+
+An account that Knock2 has identified but that your plan hasn't yet revealed (see [Accounts](/concepts/accounts)) cannot be prospected — the call returns `403 locked`. Reveal the account first, either in the dashboard or via your plan's reveal allowance, then retry.
+
+## Required Scope
+
+Your API key needs the **`prospecting:write`** scope (or the broader **`all:write`** scope). This scope is **not** granted automatically to keys provisioned for child tenants — unlike most default scopes, a spend-capable scope like this one has to be selected explicitly. See the [Prospect Contacts API reference](/api-reference/prospect/prospect-contacts) for the complete request/response shape and error codes.

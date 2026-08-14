@@ -109,8 +109,10 @@ All error responses use a consistent envelope:
 | --- | --- | --- |
 | `400` | `bad_request` | Invalid parameters or request body. |
 | `401` | `unauthorized` | Invalid or missing API key. |
-| `402` | `payment_required` | Either your account has exhausted its credits for the billing period (`POST /v1/enrich`), or the workspace itself is deactivated (`is_product_slug_active = false`) — in which case **every** `/v1` route 402s, including `GET /v1/me`, until it's reactivated. |
+| `402` | `credit_limit_exceeded` | Your account has exhausted its credits for the billing period (`POST /v1/enrich`, `POST /v1/prospect`). |
+| `402` | `account_inactive` | The workspace itself is deactivated (`is_product_slug_active = false`) — **every** `/v1` route 402s with this code, including `GET /v1/me`, until it's reactivated. |
 | `403` | `forbidden` | API key is missing a required scope for this action. |
+| `403` | `locked` | The resource has been identified but not yet revealed (`POST /v1/prospect`). |
 | `404` | `not_found` | The requested resource does not exist. |
 | `422` | `validation_error` | Request body failed schema validation. |
 | `429` | `rate_limit_exceeded` | Too many requests — apply exponential backoff and retry. |
@@ -178,6 +180,12 @@ There is no `GET /v1/webhooks/{webhook_id}` or `PUT /v1/webhooks/{webhook_id}` e
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | `POST` | `/v1/enrich` | Enrich a contact profile by email. Requires `enrichment:write`. |
+
+### Prospecting
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/v1/prospect` | Source new contacts at an account by UUID or domain. Requires `prospecting:write`. |
 
 ### Tenants (multi-tenant partners only)
 
