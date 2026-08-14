@@ -1,0 +1,171 @@
+---
+title: "Sandbox: Try the Knock2 API With Zero Setup"
+sidebarTitle: "Sandbox"
+description: "Explore every core Knock2 API endpoint with a shared, public sandbox key and realistic dummy data — no signup, no tracking script, no real website traffic required."
+---
+
+Want to see what the Knock2 API looks like before installing anything on a real site? The sandbox lets you call every core endpoint immediately with a single shared key. Every `GET` returns realistic, fixed dummy data; every write validates your input exactly like production but never touches a real account; and a one-shot webhook test-send lets you prove your receiving endpoint works before you register a real subscription.
+
+<Warning>
+  The sandbox is for exploration only. Data is static and shared by everyone who uses it — do not build any real integration logic against it. When you're ready to go live, follow the [Quickstart](/quickstart) to get your own API key.
+</Warning>
+
+## The sandbox key
+
+Every sandbox request uses the same published key — there's nothing to create and nothing to keep secret:
+
+```text
+kn_sandbox_REPLACE_WITH_PUBLISHED_KEY
+```
+
+Pass it exactly like a real key, in the `Authorization` header:
+
+```bash
+curl https://api.knock2.ai/v1/sandbox/accounts \
+  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"
+```
+
+Every sandbox endpoint lives under the `/v1/sandbox/` prefix instead of `/v1/` — nothing else about the request shape changes. A request to `/v1/sandbox/*` with a real `kn_live_...` key (or vice versa) is rejected with `401 Unauthorized`; the two are never interchangeable.
+
+<Note>
+  Because the key is public, the sandbox has its own coarse, shared rate limit — separate from the per-key limits described in [Authentication](/authentication). If you're testing high request volume, do it against a real key instead.
+</Note>
+
+## What's covered
+
+| Area | Endpoints |
+| --- | --- |
+| Auth | `GET /v1/sandbox/me` |
+| Accounts | `GET /v1/sandbox/accounts`, `GET /v1/sandbox/accounts/{account_id}` |
+| Contacts | `GET /v1/sandbox/contacts`, `GET /v1/sandbox/contacts/{contact_id}` |
+| Scores | `GET /v1/sandbox/scores`, `GET /v1/sandbox/scores/recent` |
+| Activity | `GET /v1/sandbox/activity` |
+| Filter Sets | `GET`/`POST`/`PUT`/`DELETE /v1/sandbox/filter-sets` |
+| Enrichment | `POST /v1/sandbox/enrich` |
+| Prospecting | `POST /v1/sandbox/prospect` |
+| Webhooks | `POST /v1/sandbox/webhooks/test` |
+| Tenants | `GET /v1/sandbox/tenants`, `GET /v1/sandbox/tenants/{product_slug}` (read-only preview of the [multi-tenant](/tenants/overview) delegation pattern) |
+
+Each one accepts the same parameters and returns the same response shape as its production counterpart in the [API Reference](/api-reference/overview) — code you write against the sandbox should work unmodified against a real key.
+
+<Note>
+  Reseller/child-tenant _provisioning_ (`POST /v1/tenants`, credit limits, usage, scoring config, script config) isn't in the sandbox — those actions create real state for a real tenant, which doesn't fit a shared, no-signup key. Try those with a real key instead.
+</Note>
+
+## Dummy data
+
+Every `GET` returns the same small, fixed dataset every time — two example accounts ("Acme Robotics", "Rocket Logistics") and their contacts. List endpoints paginate for real (`cursor`/`next_cursor`/`has_more` behave exactly like production), so you can test your pagination code end to end:
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.knock2.ai/v1/sandbox/contacts \
+  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.knock2.ai/v1/sandbox/contacts",
+    headers={"Authorization": "Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"},
+)
+print(response.json())
+```
+
+</CodeGroup>
+
+```json
+{
+  "data": [
+    { "id": "00000000-0000-4000-8000-000000000011", "name": "Jane Doe", "title": "VP of Sales", "company_name": "Acme Robotics", "...": "..." },
+    { "id": "00000000-0000-4000-8000-000000000012", "name": "John Smith", "title": "Engineering Manager", "company_name": "Acme Robotics", "...": "..." }
+  ],
+  "has_more": true,
+  "next_cursor": "eyJjcmVhdGVkX2F0IjogIjIwMjYtMDctMjFUMTE6MDA6MDArMDA6MDAiLCAiaWQiOiAiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDEyIn0="
+}
+```
+
+Writes (`POST /v1/sandbox/enrich`, `POST /v1/sandbox/prospect`, and the `filter-sets` endpoints) validate your request body exactly like production — send a malformed body and you'll get the same `400` you'd get for real — but nothing is saved. A valid request gets back a realistic canned response instead.
+
+## Multi-tenant preview
+
+If you manage tenants on behalf of your own customers, the sandbox includes one fixture child tenant so you can see the parent → child delegation pattern (`X-Knock-Tenant` header or `?product_slug=`) without provisioning anything real:
+
+```bash
+# Your own (parent) sandbox data
+curl https://api.knock2.ai/v1/sandbox/accounts \
+  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"
+
+# The fixture child tenant's data instead
+curl https://api.knock2.ai/v1/sandbox/accounts \
+  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY" \
+  -H "X-Knock-Tenant: sandbox-child-eu"
+```
+
+Call `GET /v1/sandbox/tenants` to look up that child tenant's `product_slug` rather than hardcoding it.
+
+## Testing your webhook receiver
+
+The one thing you can't fully dry-run against fixture data alone is your own webhook endpoint. `POST /v1/sandbox/webhooks/test` sends a single, real, signed event to a URL you provide — immediately, synchronously — so you can confirm your receiver validates signatures correctly before you register a real subscription:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.knock2.ai/v1/sandbox/webhooks/test \
+  -H "Authorization: Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-app.example.com/webhooks/knock2",
+    "event_type": "contact.identified"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "https://api.knock2.ai/v1/sandbox/webhooks/test",
+    headers={"Authorization": "Bearer kn_sandbox_REPLACE_WITH_PUBLISHED_KEY"},
+    json={
+        "url": "https://your-app.example.com/webhooks/knock2",
+        "event_type": "contact.identified",
+    },
+)
+print(response.json())
+```
+
+</CodeGroup>
+
+`event_type` accepts the same values as a real webhook subscription (`account.identified`, `contact.identified`, `score.changed`, `play.triggered`, `signal.detected`, `tenant.limit_reached`). The response tells you whether delivery succeeded:
+
+```json
+{
+  "data": {
+    "success": true,
+    "status_code": 200,
+    "latency_ms": 184,
+    "delivery_id": "3b1d6e2a-...",
+    "event_type": "contact.identified",
+    "signature": "a94f..."
+  }
+}
+```
+
+The payload is signed exactly like a real delivery — verify it the same way described in [Receive Real-Time Visitor Event Alerts via Webhooks](/guides/webhooks). Nothing is stored: there's no subscription to list or delete afterward, just the one test delivery.
+
+<Warning>
+  `url` must be HTTPS and must be an endpoint **you control**. Do not point this at a third party's URL — it triggers one real outbound HTTP request from Knock2's servers.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Ready to go live? Get your own API key and install the tracking script.
+  </Card>
+
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    See the full parameter and response reference for every endpoint the sandbox mirrors.
+  </Card>
+</CardGroup>
