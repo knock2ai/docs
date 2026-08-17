@@ -53,7 +53,9 @@ Creating and deleting webhook subscriptions requires the `webhooks:write` scope;
 
 ## Payload Structure
 
-Every webhook delivery `POST`s the event's full JSON payload directly as the request body — there's no `{"event": ..., "data": ...}` envelope wrapping it. The event type is instead carried in the `X-Knock-Event` request header. Every payload includes an `id` you can use to fetch the complete resource from the REST API, and a `product_slug` identifying which tenant the event fired for (see [Parent/Child Fan-in](#parent-child-fan-in) below).
+Every webhook delivery `POST`s the event's full JSON payload directly as the request body — there's no `{"event": ..., "data": ...}` envelope wrapping it. The event type is instead carried in the `X-Knock-Event` request header. Every payload includes a `product_slug` identifying which tenant the event fired for (see the Parent/Child Fan-in section below).
+
+Beyond that, the shape is specific to each event: `account.identified` and `contact.identified` carry the full account/contact record, with an `id` you can re-fetch via `GET /v1/accounts/{id}` or `GET /v1/contacts/{id}`. `score.changed` carries its own `id` plus a `company_lead_id` or `person_lead_id` — there's no `GET /v1/scores/{id}`, so use that id to look the current score back up via `GET /v1/scores?account_id=` / `?contact_id=`. `play.triggered` carries `play_id`/`contact_ids` rather than a top-level `id`. `signal.detected` nests its record (including its own `id`) under `data`. `tenant.limit_reached` describes a threshold being crossed rather than a single fetchable record, so it has no `id` at all.
 
 `signal.detected` is the one exception: its own payload happens to include `event` and `data` keys as part of its normal shape (see its tab below) — that's a property of that specific event, not a general envelope every event is wrapped in.
 
