@@ -53,23 +53,237 @@ Creating and deleting webhook subscriptions requires the `webhooks:write` scope;
 
 ## Payload Structure
 
-Every webhook delivery `POST`s a JSON body to your endpoint. Here is a full example for the `account.identified` event:
+Every webhook delivery `POST`s the event's full JSON payload directly as the request body — there's no `{"event": ..., "data": ...}` envelope wrapping it. The event type is instead carried in the `X-Knock-Event` request header. Every payload includes a `product_slug` identifying which tenant the event fired for (see the Parent/Child Fan-in section below).
 
-```json
+Beyond that, the shape is specific to each event: `account.identified` and `contact.identified` carry the full account/contact record, with an `id` you can re-fetch via `GET /v1/accounts/{id}` or `GET /v1/contacts/{id}`. `score.changed` carries its own `id` plus a `company_lead_id` or `person_lead_id` — there's no `GET /v1/scores/{id}`, so use that id to look the current score back up via `GET /v1/scores?account_id=` / `?contact_id=`. `play.triggered` carries `play_id`/`contact_ids` rather than a top-level `id`. `signal.detected` nests its record (including its own `id`) under `data`. `tenant.limit_reached` describes a threshold being crossed rather than a single fetchable record, so it has no `id` at all.
+
+`signal.detected` is the one exception: its own payload happens to include `event` and `data` keys as part of its normal shape (see its tab below) — that's a property of that specific event, not a general envelope every event is wrapped in.
+
+Here is a real sample payload for each event type:
+
+<CodeGroup>
+
+```json account.identified
 {
-  "event": "account.identified",
-  "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "Acme Corp",
-    "domain": "acme.com",
-    "industry": "Software",
-    "latest_visit_page": "/pricing",
-    "latest_visit_datetime": "2024-06-01T14:23:00Z"
-  }
+  "address_city": "Austin",
+  "address_country": "US",
+  "address_state": "TX",
+  "address_zip_code": "78701",
+  "created_at": "2026-07-20T10:00:00+00:00",
+  "crm_company_owner_email": "sales.owner@example.com",
+  "crm_company_owner_first_name": "Sam",
+  "crm_company_owner_last_name": "Owner",
+  "crm_deal_close_datetime": "2026-09-15T00:00:00+00:00",
+  "crm_deal_name": "Acme Robotics - Expansion",
+  "crm_deal_owner_email": "sales.owner@example.com",
+  "crm_deal_owner_first_name": "Sam",
+  "crm_deal_owner_last_name": "Owner",
+  "crm_deal_source": "hubspot",
+  "crm_deal_stage": "negotiation",
+  "crm_deal_value_usd": 42000.0,
+  "description": "Builds warehouse automation robots for logistics companies.",
+  "document_referrer": "https://www.google.com/",
+  "domain": "acme-robotics.com",
+  "estimated_annual_revenue": "$10M-$50M",
+  "estimated_employee_count": "51-200",
+  "hubspot_company_id": "1000000001",
+  "id": "00000000-0000-4000-8000-000000000001",
+  "industry": "Robotics & Automation",
+  "is_from_enrichment": false,
+  "is_qualified": true,
+  "last_funding_amount": 28000000,
+  "last_funding_date": "2025-11-03",
+  "last_funding_round_type": "Series B",
+  "latest_visit_datetime": "2026-08-10T14:32:00+00:00",
+  "latest_visit_page": "/pricing",
+  "linkedin_url": "https://www.linkedin.com/company/acme-robotics",
+  "location": "Austin, TX, US",
+  "locked_at": null,
+  "logo_url": "https://logo.clearbit.com/acme-robotics.com",
+  "name": "Acme Robotics",
+  "page_visits": [
+    {
+      "end_time": "2026-08-10T14:34:12+00:00",
+      "page": "/pricing",
+      "start_time": "2026-08-10T14:30:00+00:00"
+    },
+    {
+      "end_time": "2026-08-09T09:15:40+00:00",
+      "page": "/product",
+      "start_time": "2026-08-09T09:12:00+00:00"
+    }
+  ],
+  "phone_numbers": ["+1-555-010-0001"],
+  "product_slug": "sandbox",
+  "salesforce_account_id": null,
+  "sector": "Industrials",
+  "tags": ["target_account"],
+  "technology_tags": ["Salesforce", "HubSpot"],
+  "total_browsing_time_seconds": 452,
+  "utm_campaign": "brand",
+  "utm_content": null,
+  "utm_medium": "cpc",
+  "utm_source": "google",
+  "utm_term": null,
+  "utms": []
 }
 ```
 
-The top-level `event` field tells you which event type fired. The `data` object contains the full record — its shape varies by event type but always includes an `id` you can use to fetch the complete resource from the REST API.
+```json contact.identified
+{
+  "address_city": "Austin",
+  "address_country": "US",
+  "address_state": "TX",
+  "address_zip_code": "78701",
+  "business_email": "jane.doe@acme-robotics.com",
+  "business_email_last_validated_at": "2026-08-01T00:00:00+00:00",
+  "company_address_city": "Austin",
+  "company_address_country": "US",
+  "company_address_state": "TX",
+  "company_address_zip_code": "78701",
+  "company_annual_revenue_max": 50000000.0,
+  "company_annual_revenue_min": 10000000.0,
+  "company_description": "Builds warehouse automation robots for logistics companies.",
+  "company_domain": "acme-robotics.com",
+  "company_employees_max": 200,
+  "company_employees_min": 51,
+  "company_estimated_annual_revenue": "$10M-$50M",
+  "company_estimated_employee_count": "51-200",
+  "company_id": "00000000-0000-4000-8000-000000000001",
+  "company_industry": "Robotics & Automation",
+  "company_last_funding_amount": 28000000,
+  "company_last_funding_date": "2025-11-03",
+  "company_last_funding_round_type": "Series B",
+  "company_linkedin_url": "https://www.linkedin.com/company/acme-robotics",
+  "company_location": "Austin, TX, US",
+  "company_logo_url": "https://logo.clearbit.com/acme-robotics.com",
+  "company_name": "Acme Robotics",
+  "company_phone_numbers": ["+1-555-010-0001"],
+  "company_sector": "Industrials",
+  "company_tags": ["target_account"],
+  "company_technology_tags": ["Salesforce", "HubSpot"],
+  "created_at": "2026-07-20T10:05:00+00:00",
+  "crm_company_owner_email": "sales.owner@example.com",
+  "crm_company_owner_first_name": "Sam",
+  "crm_company_owner_last_name": "Owner",
+  "crm_deal_close_datetime": "2026-09-15T00:00:00+00:00",
+  "crm_deal_name": "Acme Robotics - Expansion",
+  "crm_deal_owner_email": "sales.owner@example.com",
+  "crm_deal_owner_first_name": "Sam",
+  "crm_deal_owner_last_name": "Owner",
+  "crm_deal_source": "hubspot",
+  "crm_deal_stage": "negotiation",
+  "crm_deal_value_usd": 42000.0,
+  "departments": ["sales"],
+  "document_referrer": "https://www.google.com/",
+  "email": "jane.doe@acme-robotics.com",
+  "first_name": "Jane",
+  "headline": null,
+  "hubspot_company_id": "1000000001",
+  "icp_scoring_icp_id": "00000000-0000-4000-8000-000000000901",
+  "icp_scoring_icp_title": "Enterprise Buyer",
+  "icp_scoring_reason": "Senior sales leader at a target-tagged account with high engagement.",
+  "icp_scoring_score": 88,
+  "id": "00000000-0000-4000-8000-000000000011",
+  "is_business_email_valid": true,
+  "is_qualified": true,
+  "last_email_validation_id": null,
+  "last_enriched_at": "2026-08-01T00:00:00+00:00",
+  "last_enrichment_id": null,
+  "last_name": "Doe",
+  "latest_visit_datetime": "2026-08-10T14:32:00+00:00",
+  "latest_visit_page": "/pricing",
+  "linkedin_url": "https://www.linkedin.com/in/janedoe-example",
+  "location": "Austin, TX, US",
+  "locked_at": null,
+  "match_type": "identified",
+  "name": "Jane Doe",
+  "page_visits": [
+    {
+      "end_time": "2026-08-10T14:34:12+00:00",
+      "page": "/pricing",
+      "start_time": "2026-08-10T14:30:00+00:00"
+    }
+  ],
+  "personal_email": null,
+  "phone_numbers": ["+1-555-010-0011"],
+  "photo_url": null,
+  "posthog_session_id": null,
+  "product_slug": "sandbox",
+  "salesforce_account_id": null,
+  "seniority": "vp",
+  "title": "VP of Sales",
+  "total_browsing_time_seconds": 252,
+  "utm_campaign": "brand",
+  "utm_content": null,
+  "utm_medium": "cpc",
+  "utm_source": "google",
+  "utm_term": null,
+  "utms": []
+}
+```
+
+```json score.changed
+{
+  "company_lead_id": "00000000-0000-4000-8000-000000000001",
+  "id": "00000000-0000-4000-8000-000000000099",
+  "product_slug": "sandbox",
+  "reason": "Sandbox test event",
+  "score": 91,
+  "type": "company_lead"
+}
+```
+
+```json play.triggered
+{
+  "contact_ids": ["00000000-0000-4000-8000-000000000011"],
+  "play_id": "00000000-0000-4000-8000-000000000091",
+  "play_name": "Sandbox Test Play",
+  "product_slug": "sandbox",
+  "triggered_at": "2026-08-14T12:00:00+00:00",
+  "workflow_id": "00000000-0000-4000-8000-000000000091",
+  "workflow_name": "Sandbox Test Play"
+}
+```
+
+```json signal.detected
+{
+  "data": {
+    "company_lead_id": "00000000-0000-4000-8000-000000000001",
+    "detected_at": "2026-08-14T12:00:00+00:00",
+    "entity_domain": "acme-robotics.com",
+    "entity_name": "Acme Robotics",
+    "id": "00000000-0000-4000-8000-000000000098",
+    "occurred_at": "2026-08-14T00:00:00+00:00",
+    "person_lead_id": null,
+    "signal_type": "funding",
+    "source_url": "https://example.com/news/acme-robotics-series-b",
+    "summary": "Acme Robotics announced a Series B funding round.",
+    "title": "Acme Robotics raised a new funding round",
+    "watchlist_id": "00000000-0000-4000-8000-000000000097"
+  },
+  "event": "signal.detected",
+  "product_slug": "sandbox"
+}
+```
+
+```json tenant.limit_reached
+{
+  "limit_type": "credits",
+  "limit_value": 500,
+  "period": "billing_period",
+  "product_slug": "sandbox",
+  "window_start": "2026-08-01T00:00:00+00:00"
+}
+```
+
+</CodeGroup>
+
+<Note>
+  `workflow.triggered` is a deprecated alias of `play.triggered` — Knock2 dispatches it with the exact same payload shown in the `play.triggered` tab above (`play_id`/`play_name` are simply aliased as `workflow_id`/`workflow_name`). Existing subscriptions keep receiving it; don't subscribe new integrations to it.
+</Note>
+
+These samples come from the same fixture data used by the [sandbox environment](/sandbox) and are kept in sync with real dispatch payloads by an automated check — if a field looks off, it's out of date rather than approximate, so let us know.
 
 ## Verifying Signatures
 
