@@ -144,12 +144,12 @@
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://app.knock2.ai"
+      "href": "https://dashboard.knock2.ai/"
     }
   },
   "footer": {
     "socials": {
-      "linkedin": "https://linkedin.com/company/knock2"
+      "linkedin": "https://www.linkedin.com/company/knock2ai"
     }
   }
 }
