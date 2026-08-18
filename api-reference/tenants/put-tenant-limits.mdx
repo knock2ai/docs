@@ -61,7 +61,7 @@ Returns the newly-set allocations with usage, same shape as [Get Tenant Limits](
 - Lowering a limit below current usage takes effect immediately — the tenant is blocked on its next check (bounded by the block-status cache TTL, a few minutes).
 - Over-allocating across children is allowed by design — Knock2 does not enforce that the sum of every child's allocation stays under your own plan's credit limit. Use [`GET /v1/tenants`](/api-reference/tenants/list-tenants)'s `allocated_total_credits`/`plan_credits` to monitor the ratio yourself.
 - Values must always be in natural units — never store a credits-denominated number under `type: "contacts"` or `"accounts"`; the API converts to credits internally for the `equivalent_credits` field.
-- Subscribe to the `tenant.limit_reached` webhook event to be notified when a child exhausts an allocation (see the [Webhooks guide](/guides/webhooks)).
+- Subscribe to the `tenant.limit_reached` webhook event to be notified when a child exhausts an allocation, and `tenant.limit_approaching` to hear about it earlier, once usage crosses 80% (see the [Webhooks guide](/guides/webhooks)).
 
 ## Required Scope
 
