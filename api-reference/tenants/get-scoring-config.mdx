@@ -2,6 +2,7 @@
 title: "GET /v1/tenants/{product_slug}/scoring-config — Get a Tenant's Lead-Scoring Configuration"
 sidebarTitle: "Get Scoring Config"
 description: "GET /v1/tenants/{product_slug}/scoring-config returns a tenant's Company Profile, Buyer Persona, and scoring weight — the same fields set in the dashboard's ICP settings. Requires tenants:read."
+url: "GET /v1/tenants/{product_slug}/scoring-config"
 ---
 
 `GET /v1/tenants/{product_slug}/scoring-config` returns the Company Profile and Buyer Persona configuration that drives lead scoring for a tenant — the same fields configurable in the Knock2 dashboard's ICP settings, now readable via the API. Use this to audit or migrate a child tenant's scoring setup, or to confirm a value set via [Update Scoring Config](/api-reference/tenants/update-scoring-config) or at creation time took effect.

@@ -2,6 +2,7 @@
 title: "PATCH /v1/tenants/{product_slug}/scoring-config — Update a Tenant's Lead-Scoring Configuration"
 sidebarTitle: "Update Scoring Config"
 description: "PATCH /v1/tenants/{product_slug}/scoring-config sets a direct child tenant's Company Profile and Buyer Persona — previously dashboard-only. Requires tenants:write."
+url: "PATCH /v1/tenants/{product_slug}/scoring-config"
 ---
 
 `PATCH /v1/tenants/{product_slug}/scoring-config` sets the Company Profile and Buyer Persona that drive lead scoring for your own tenant or a direct child tenant. Before this endpoint, these fields could only be set by hand in the dashboard, which meant a programmatically provisioned tenant scored every visitor against an empty ICP until someone logged in and filled it out. Call this right after [Create Tenant](/api-reference/tenants/create-tenant) — or pass the same fields as `scoring_config` on the create call itself — to make onboarding fully hands-off.

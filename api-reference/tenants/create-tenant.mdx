@@ -2,6 +2,7 @@
 title: "POST /v1/tenants — Provision a New Tenant"
 sidebarTitle: "Create Tenant"
 description: "POST /v1/tenants provisions a new isolated Knock2 sub-tenant and returns a one-time API key. Requires tenants:write scope on the parent key."
+url: "POST /v1/tenants"
 ---
 
 `POST /v1/tenants` provisions a new isolated Knock2 sub-tenant under your parent account. Use this endpoint to programmatically onboard customers in multi-tenant SaaS products — each sub-tenant gets its own API key, tracking script, and data isolation boundary. The response includes a one-time API key and a ready-to-embed script URL for the new tenant. Provisioning a tenant immediately enables IP-to-company identification and person identification for that tenant.

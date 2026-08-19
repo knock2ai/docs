@@ -2,6 +2,7 @@
 title: "GET /v1/script — Retrieve Your Tracking Script"
 sidebarTitle: "Get Script"
 description: "GET /v1/script returns the tracking script URL and a ready-to-embed HTML snippet for your Knock2 tenant. Paste it into your site's head tag."
+url: "GET /v1/script"
 ---
 
 `GET /v1/script` returns everything you need to install the Knock2 tracking script on your site. The script is served directly from Knock2's own API (not a separate CDN) — the response includes the script URL and a pre-built `<script>` tag with your tenant slug already baked into the path, so you can paste it directly into your site's `<head>` without any manual configuration.

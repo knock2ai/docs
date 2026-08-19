@@ -2,6 +2,7 @@
 title: "GET /v1/contacts — List Identified Contacts"
 sidebarTitle: "List Contacts"
 description: "GET /v1/contacts returns a paginated list of identified individual contacts. Filter by email, account_id, filter_set_id, or inline filter JSON."
+url: "GET /v1/contacts"
 ---
 
 The List Contacts endpoint returns a paginated list of every individual contact Knock2 has identified visiting your website. Each record includes personal details such as name, job title, and email address alongside the company they belong to, their ICP (Ideal Customer Profile) score, and a summary of their most recent visit activity. Use the `account_id` parameter to scope results to contacts from a specific company, the `email` parameter for a direct lookup, or build richer segmentation with `filter_set_id` or inline `filters`.

@@ -151,5 +151,16 @@
     "socials": {
       "linkedin": "https://www.linkedin.com/company/knock2ai"
     }
+  },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    },
+    "mdx": {
+      "auth": {
+        "method": "bearer"
+      },
+      "server": "https://api.knock2.ai"
+    }
   }
 }

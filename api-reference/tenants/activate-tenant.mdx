@@ -2,6 +2,7 @@
 title: "POST /v1/tenants/{product_slug}/activate — Reactivate a Tenant"
 sidebarTitle: "Reactivate Tenant"
 description: "POST /v1/tenants/{product_slug}/activate reverses a prior deactivation — the only self-service path back for a domain whose tenant was previously deactivated. Requires tenants:write."
+url: "POST /v1/tenants/{product_slug}/activate"
 ---
 
 `POST /v1/tenants/{product_slug}/activate` reactivates a tenant previously deactivated via `DELETE /v1/tenants/{product_slug}` — the mirror of that operation. Only a direct child of the calling key can be reactivated, and only while it's currently deactivated.

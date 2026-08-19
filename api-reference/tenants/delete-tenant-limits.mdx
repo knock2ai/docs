@@ -2,6 +2,7 @@
 title: "DELETE /v1/tenants/{product_slug}/limits — Remove a Tenant's Credit Allocations"
 sidebarTitle: "Remove Tenant Limits"
 description: "DELETE /v1/tenants/{product_slug}/limits removes all allocations from a tenant — it becomes unlimited within the parent's own pool. Requires tenants:write."
+url: "DELETE /v1/tenants/{product_slug}/limits"
 ---
 
 `DELETE /v1/tenants/{product_slug}/limits` removes every allocation from a direct child tenant. The tenant becomes unlimited within its parent's own credit pool — equivalent to `PUT .../limits` with an empty `limits` array.

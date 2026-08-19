@@ -2,6 +2,7 @@
 title: "POST /v1/webhooks — Create a Webhook Subscription"
 sidebarTitle: "Create Webhook"
 description: "POST /v1/webhooks registers a new webhook endpoint for one or more Knock2 event types. Payloads are signed with HMAC-SHA256 for secure delivery."
+url: "POST /v1/webhooks"
 ---
 
 Webhook subscriptions let you receive real-time HTTP notifications whenever Knock2 identifies a visitor, updates a lead score, or triggers a play. When you call `POST /v1/webhooks`, Knock2 registers your endpoint and begins delivering signed payloads for every event type you specify. All outbound payloads are signed with HMAC-SHA256 so you can verify they originated from Knock2.
