@@ -2,6 +2,7 @@
 title: "POST /v1/enrich — Enrich a Contact by Email or LinkedIn URL"
 sidebarTitle: "Enrich Contact"
 description: "POST /v1/enrich looks up a contact by email or LinkedIn URL and returns a merged contact profile. Costs 1 credit per match. Requires the enrichment:write scope."
+url: "POST /v1/enrich"
 ---
 
 `POST /v1/enrich` runs an email address and/or LinkedIn URL through Knock2's enrichment waterfall — querying multiple sources in sequence and merging the results into a single unified contact profile. You get back fields like job title, seniority, department, and company details in one call. Each successful enrichment costs 1 credit from your account balance, so Knock2 only charges you when data is actually found.

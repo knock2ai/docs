@@ -2,6 +2,7 @@
 title: "DELETE /v1/filter-sets/{filter_set_id} — Remove Filter Set"
 sidebarTitle: "Delete Filter Set"
 description: "DELETE /v1/filter-sets/{filter_set_id} permanently removes a saved filter set from your tenant. System-managed sets are protected and return 403."
+url: "DELETE /v1/filter-sets/{filter_set_id}"
 ---
 
 Use this endpoint to permanently remove a filter set from your tenant. Deletion is irreversible — any queries or integrations that reference the deleted `filter_set_id` will need to be updated. System-managed filter sets are protected and cannot be deleted.

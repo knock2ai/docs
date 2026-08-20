@@ -2,6 +2,7 @@
 title: "PATCH /v1/tenants/{product_slug}/script-config — Update a Tenant's Tracking-Script Exclusion Configuration"
 sidebarTitle: "Update Script Config"
 description: "PATCH /v1/tenants/{product_slug}/script-config sets pages_to_ignore for your own tenant or a direct child tenant. Requires tenants:write."
+url: "PATCH /v1/tenants/{product_slug}/script-config"
 ---
 
 `PATCH /v1/tenants/{product_slug}/script-config` sets `pages_to_ignore` — the URL path patterns on which the tracking script does not run at all — for your own tenant or a direct child tenant. Before this endpoint, this could only be set by hand in the dashboard's Script Settings page. Call this right after [Create Tenant](/api-reference/tenants/create-tenant) — or pass the same field as `script_config` on the create call itself — to exclude known non-prospect paths (an internal admin subpath, a tenant portal, a careers page) from the very first pageview.

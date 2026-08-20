@@ -2,6 +2,7 @@
 title: "List Page Visit Activity for Accounts and Contacts"
 sidebarTitle: "List Activity"
 description: "GET /v1/activity returns page visit events for an account or contact. Requires account_id or contact_id. Supports cursor-based pagination."
+url: "GET /v1/activity"
 ---
 
 The activity endpoint returns page-visit history — every page browsed, when the visit started and ended. Scope it to a specific account or contact with `account_id`/`contact_id`, or omit both to get a single tenant-wide feed across every account and contact, newest first. Use it to understand engagement patterns, build timelines in your CRM, or trigger workflows based on high-intent page visits.

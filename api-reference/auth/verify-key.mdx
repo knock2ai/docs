@@ -2,6 +2,7 @@
 title: "GET /v1/me — Verify Your Knock2 API Key"
 sidebarTitle: "Verify Key"
 description: "GET /v1/me confirms your API key is valid and returns the tenant (product_slug) it belongs to. Use this as a connection test in integrations."
+url: "GET /v1/me"
 ---
 
 Use `GET /v1/me` as a health check or connection-test step — it confirms the API key is valid and returns the tenant it belongs to. This endpoint is ideal for validating a newly issued key or testing connectivity during integration setup. It intentionally returns the minimum possible payload and does not include the key's scopes.

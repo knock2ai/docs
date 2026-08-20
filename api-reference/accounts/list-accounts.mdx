@@ -2,6 +2,7 @@
 title: "GET /v1/accounts — List Identified Accounts"
 sidebarTitle: "List Accounts"
 description: "GET /v1/accounts returns a paginated list of identified company accounts. Supports filtering by domain, filter_set_id, or inline filter JSON."
+url: "GET /v1/accounts"
 ---
 
 The List Accounts endpoint returns a paginated list of every company account Knock2 has identified visiting your website. Each record includes firmographic data — company name, domain, industry, employee count, estimated revenue — alongside behavioral data such as the latest visited page and total browsing time. You can narrow results to a specific company by passing a `domain` parameter, apply a pre-built filter set with `filter_set_id`, or construct ad-hoc filter logic with the `filters` parameter.

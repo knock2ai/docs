@@ -2,6 +2,7 @@
 title: "PUT /v1/tenants/{product_slug}/limits — Replace a Tenant's Credit Allocations"
 sidebarTitle: "Replace Tenant Limits"
 description: "PUT /v1/tenants/{product_slug}/limits replaces a tenant's entire allocation set. Idempotent — no partial-state ambiguity. Requires tenants:write."
+url: "PUT /v1/tenants/{product_slug}/limits"
 ---
 
 `PUT /v1/tenants/{product_slug}/limits` replaces a direct child tenant's **entire** allocation set in one call — idempotent, with no partial-state ambiguity. Only a key whose `product_slug` is this tenant's `parent_product_slug` may call this.

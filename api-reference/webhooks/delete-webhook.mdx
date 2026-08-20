@@ -2,6 +2,7 @@
 title: "DELETE /v1/webhooks/{webhook_id} — Remove a Webhook"
 sidebarTitle: "Delete Webhook"
 description: "DELETE /v1/webhooks/{webhook_id} permanently removes a webhook subscription and stops all event delivery to that endpoint immediately."
+url: "DELETE /v1/webhooks/{webhook_id}"
 ---
 
 When you no longer need Knock2 to deliver events to a particular endpoint, call `DELETE /v1/webhooks/{webhook_id}` to remove the subscription. Knock2 stops sending payloads to the registered URL immediately upon deletion. This action is permanent — if you need to resume delivery you must create a new subscription.

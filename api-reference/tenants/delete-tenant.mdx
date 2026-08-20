@@ -2,6 +2,7 @@
 title: "DELETE /v1/tenants/{product_slug} — Deactivate a Tenant"
 sidebarTitle: "Delete Tenant"
 description: "DELETE /v1/tenants/{product_slug} deactivates a sub-tenant, stopping its tracking script and visitor identification. Data is retained."
+url: "DELETE /v1/tenants/{product_slug}"
 ---
 
 When you need to offboard a customer or suspend a sub-tenant, call `DELETE /v1/tenants/{product_slug}` to deactivate it. Knock2 immediately stops processing events from the tenant's tracking script and halts all visitor identification for that tenant. This is a soft delete — all historical data is retained, and reactivation is a self-service `POST /v1/tenants/{product_slug}/activate` call away.

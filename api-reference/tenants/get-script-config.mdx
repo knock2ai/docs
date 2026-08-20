@@ -2,6 +2,7 @@
 title: "GET /v1/tenants/{product_slug}/script-config — Get a Tenant's Tracking-Script Exclusion Configuration"
 sidebarTitle: "Get Script Config"
 description: "GET /v1/tenants/{product_slug}/script-config returns pages_to_ignore, the URL path patterns on which the tracking script does not run at all. Requires tenants:read."
+url: "GET /v1/tenants/{product_slug}/script-config"
 ---
 
 `GET /v1/tenants/{product_slug}/script-config` returns `pages_to_ignore` — the URL path patterns on which the tracking script does not run at all for this tenant. A page matching one of these patterns never initializes the script: no session, no page history, no identification lookup, no vendor scripts, no chat widget, and no credits spent. This is the same setting configurable in the dashboard's Script Settings page, under "Excluded Pages," now readable via the API.
