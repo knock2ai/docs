@@ -37,7 +37,8 @@ curl https://api.knock2.ai/v1/tenants/acme_com_yourco_com/limits \
       "is_enforced": true,
       "equivalent_credits": 100,
       "used": 4,
-      "remaining": 96
+      "remaining": 96,
+      "is_reached": false
     }
   ]
 }
@@ -49,6 +50,10 @@ curl https://api.knock2.ai/v1/tenants/acme_com_yourco_com/limits \
 
 <ResponseField name="data[].equivalent_credits" type="number">
   The same cap expressed in credits, so allocations of different `type`s are comparable.
+</ResponseField>
+
+<ResponseField name="data[].is_reached" type="boolean">
+  True once this allocation has stopped admitting new leads of the kind it governs. Always `false` when `is_enforced` is `false`. For a `credits` allocation this can be `true` while `remaining` is still positive — contacts pause once fewer credits remain than a single contact costs, so a single contact can never push usage past the limit. For `contacts` and `accounts` allocations, `is_reached` matches `used >= value` exactly, since each lead there costs one unit.
 </ResponseField>
 
 An empty `data` array means the tenant has no allocation set and is unlimited within its parent's own pool.

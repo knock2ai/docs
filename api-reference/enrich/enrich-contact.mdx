@@ -103,7 +103,7 @@ A successful request returns `200 OK` with an `EnrichResponse` body.
 
 ## Credits
 
-Each call that returns `status: enriched` costs **1 credit**. Calls that return `not_found` are free. If your account has reached its credit limit, Knock2 returns a `402` error. You can view your remaining credits and purchase additional ones in the Knock2 dashboard.
+Each call that returns `status: enriched` costs **1 credit**. Calls that return `not_found` are free. If your account has reached its credit limit, Knock2 returns a `402` error. For a child tenant with a `credits` allocation (see [tenant limits](/api-reference/tenants/put-tenant-limits)), this endpoint can also return `402` once that allocation's contact cap has paused new contacts — which can happen a little before the credit limit number itself is reached. You can view your remaining credits and purchase additional ones in the Knock2 dashboard.
 
 ## Required Scope
 
@@ -114,7 +114,7 @@ This endpoint requires the `enrichment:write` scope (or the broader `all:write` 
 | Status | Meaning |
 | --- | --- |
 | `401` | Missing or invalid API key. |
-| `402` | Credit limit reached, or workspace deactivated. Add more credits or reactivate in the Knock2 dashboard to continue enriching contacts. |
+| `402` | Credit limit reached, a child tenant's contact allocation has paused (see [Credits](#credits) above), or workspace deactivated. Add more credits, raise the allocation, or reactivate in the Knock2 dashboard to continue enriching contacts. |
 | `403` | Your API key does not have the `enrichment:write` scope required for this endpoint. |
 | `422` | Neither `email` nor `linkedin_url` was provided, or `email` is not a valid email address. |
 | `429` | Rate limit exceeded. Slow down your request rate and retry. |

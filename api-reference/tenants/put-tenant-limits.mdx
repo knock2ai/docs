@@ -50,8 +50,8 @@ Returns the newly-set allocations with usage, same shape as [Get Tenant Limits](
 ```json
 {
   "data": [
-    {"type": "credits", "value": 100, "period": "lifetime", "is_enforced": true, "equivalent_credits": 100, "used": 4, "remaining": 96},
-    {"type": "contacts", "value": 10, "period": "week", "is_enforced": true, "equivalent_credits": 10, "used": 0, "remaining": 10}
+    {"type": "credits", "value": 100, "period": "lifetime", "is_enforced": true, "equivalent_credits": 100, "used": 4, "remaining": 96, "is_reached": false},
+    {"type": "contacts", "value": 10, "period": "week", "is_enforced": true, "equivalent_credits": 10, "used": 0, "remaining": 10, "is_reached": false}
   ]
 }
 ```
@@ -61,7 +61,7 @@ Returns the newly-set allocations with usage, same shape as [Get Tenant Limits](
 - Lowering a limit below current usage takes effect immediately — the tenant is blocked on its next check (bounded by the block-status cache TTL, a few minutes).
 - Over-allocating across children is allowed by design — Knock2 does not enforce that the sum of every child's allocation stays under your own plan's credit limit. Use [`GET /v1/tenants`](/api-reference/tenants/list-tenants)'s `allocated_total_credits`/`plan_credits` to monitor the ratio yourself.
 - Values must always be in natural units — never store a credits-denominated number under `type: "contacts"` or `"accounts"`; the API converts to credits internally for the `equivalent_credits` field.
-- Subscribe to the `tenant.limit_reached` webhook event to be notified when a child exhausts an allocation, and `tenant.limit_approaching` to hear about it earlier, once usage crosses 80% (see the [Webhooks guide](/guides/webhooks)).
+- Subscribe to the `tenant.limit_reached` webhook event to be notified when a child's allocation stops admitting new leads, and `tenant.limit_approaching` to hear about it earlier, once usage crosses 80% (see the [Webhooks guide](/guides/webhooks)). For a `credits` allocation, `tenant.limit_reached` fires once fewer credits remain than a single contact costs, not only once the limit itself is hit — a single contact can never push usage past the cap.
 
 ## Required Scope
 
