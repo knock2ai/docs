@@ -48,7 +48,8 @@ curl https://api.knock2.ai/v1/tenants \
           "is_enforced": true,
           "equivalent_credits": 100,
           "used": 4,
-          "remaining": 96
+          "remaining": 96,
+          "is_reached": false
         }
       ]
     }
@@ -61,7 +62,7 @@ curl https://api.knock2.ai/v1/tenants \
 ```
 
 <ResponseField name="data[].limits" type="array">
-  Every allocation currently set on this tenant, each with `used`/`remaining` for its window. Empty when the tenant has no allocation (unlimited within your own pool).
+  Every allocation currently set on this tenant, each with `used`/`remaining` for its window, and `is_reached` — true once it has stopped admitting new leads (for a `credits` allocation, that can happen while `remaining` is still positive; see [Get Tenant Limits](/api-reference/tenants/get-tenant-limits)). Empty when the tenant has no allocation (unlimited within your own pool).
 </ResponseField>
 
 <ResponseField name="allocated_total_credits" type="number">

@@ -16,7 +16,7 @@ Webhooks let your backend systems react to Knock2 events the moment they happen 
 | `play.triggered` | A play fired for a contact or account |
 | `workflow.triggered` | Deprecated alias for `play.triggered` — kept for existing subscriptions, do not use for new ones |
 | `signal.detected` | A new buyer signal event was detected for a watched account or contact |
-| `tenant.limit_reached` | A child tenant's credit/contact/account allocation (see [tenant limits](/api-reference/tenants/put-tenant-limits)) was exhausted — dispatched only to subscriptions registered under the **parent's** key, since the allocation is the parent's lever. Register the subscription on your own (parent) key, not the child's — a child's own subscription will never receive this event about itself. |
+| `tenant.limit_reached` | A child tenant's credit/contact/account allocation (see [tenant limits](/api-reference/tenants/put-tenant-limits)) stopped admitting new leads — dispatched only to subscriptions registered under the **parent's** key, since the allocation is the parent's lever. Register the subscription on your own (parent) key, not the child's — a child's own subscription will never receive this event about itself. For a `credits` allocation this fires once fewer credits remain than a single contact costs, not only once the limit itself is hit — the payload's `used`/`remaining` show exactly where it stopped. |
 | `tenant.limit_approaching` | A child tenant's credit/contact/account allocation crossed 80% usage — same parent-key-only delivery as `tenant.limit_reached` above, and independent of it: a child can cross 80% and 100% in the same billing period, and both events fire. |
 
 ## Create a Webhook
@@ -276,6 +276,8 @@ Here is a real sample payload for each event type:
   "limit_value": 500,
   "period": "billing_period",
   "product_slug": "sandbox",
+  "remaining": 4,
+  "used": 496,
   "window_start": "2026-08-01T00:00:00+00:00"
 }
 ```
