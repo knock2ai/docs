@@ -89,6 +89,37 @@ curl https://api.knock2.ai/v1/script/status \
 
 If `is_installed` is `false` after deploying, double-check that the snippet is present in the rendered HTML of your live site (use your browser's View Source or DevTools Network tab to confirm the request to your `/install/{your_tenant}/prod` script URL loads).
 
+## Identify Known Visitors
+
+Everything above is _inferred_ identification — Knock2 matches a visitor's IP and browsing behavior to a company and, where possible, a person. When your own site already knows who a visitor is — they log in, sign up, or submit a form you've wired up yourself — you can tell Knock2 directly and skip the guesswork for that visitor.
+
+Once the tracking script has loaded, call `window.knock2.identify()` with the visitor's email:
+
+```js
+window.knock2.identify("jane@customer.com");
+```
+
+You can optionally pass a second `traits` argument with any additional attributes you want to record alongside the email:
+
+```js
+window.knock2.identify("jane@customer.com", {
+  plan: "enterprise",
+  role: "admin",
+});
+```
+
+Call this as soon as you know who the visitor is — typically right after a successful login or signup, the same moment you'd call an analytics tool's own `identify()` method.
+
+<Note>
+  `window.knock2.identify()` only runs once the tracking script has loaded. Guard calls that might fire before that (e.g. on your very first paint) with `window.knock2?.identify?.(email)`, or call it from code that only runs after your page has fully loaded.
+</Note>
+
+<Note>
+  A visitor who has opted out via Global Privacy Control or your site's own privacy preferences is automatically excluded — calling `identify()` for an opted-out visitor is a no-op, and nothing is sent to Knock2.
+</Note>
+
+A confirmed identity recorded this way is kept separate from Knock2's inferred contact and company records. It does not automatically change or correct an existing contact or company in your workspace.
+
 ## Framework-Specific Tips
 
 <AccordionGroup>
