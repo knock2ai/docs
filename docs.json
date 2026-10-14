@@ -151,5 +151,12 @@
     "socials": {
       "linkedin": "https://www.linkedin.com/company/knock2ai"
     }
+  },
+  "integrations": {
+    "posthog": {
+      "apiKey": "phc_LYHkSoG2lrcrs93HlwfaxaC1OyrwwPnTWDaJkFVJnM3",
+      "apiHost": "https://us.i.posthog.com",
+      "sessionRecording": true
+    }
   }
 }
