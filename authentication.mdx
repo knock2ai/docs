@@ -9,7 +9,7 @@ Every request you make to the Knock2 REST API must be authenticated with an API 
 ## Getting your API key
 
 <Tip>
-  Don't have a Knock2 account yet, or just want to explore first? The [Sandbox](/sandbox) uses a shared public key (prefixed `kn_sandbox_` instead of `kn_live_`) that works against every core endpoint immediately, with realistic dummy data and no signup.
+  Don't have a Knock2 account yet, or just want to explore first? The [Sandbox](/sandbox) works against every core endpoint immediately, with realistic dummy data and no signup — call `POST /v1/sandbox/keys` to get a temporary key on the spot (prefixed `kn_sandbox_temp_` instead of `kn_live_`), good for 30 minutes.
 </Tip>
 
 Log in to the [Knock2 dashboard](https://dashboard.knock2.ai/) and go to **Settings → API Keys**. Click **Create API Key**, enter a descriptive label (for example, `backend-production` or `zapier-integration`), and copy the key that appears.
@@ -152,6 +152,11 @@ Common causes and fixes:
 | `401` on every request | Missing `Bearer ` prefix | Ensure the header value is `Bearer kn_live_...` |
 | `401` after key rotation | Old key still in use | Update the key in your environment variables and redeploy |
 | `403 Forbidden` on any endpoint | Key lacks the required scope for that operation (see the scope table above) | Create a new key with the correct scope, or add `all:read`/`all:write` |
+| `401` on `/v1/sandbox/*` | Missing, invalid, or expired sandbox key | Call `POST /v1/sandbox/keys` for a fresh temporary key — see [Sandbox](/sandbox) |
+
+<Note>
+  A `401` from any `/v1/sandbox/*` endpoint includes a message pointing you at `POST /v1/sandbox/keys`, since a sandbox key is free to get and expires after 30 minutes if it's the self-serve kind.
+</Note>
 
 ## Rate limiting
 

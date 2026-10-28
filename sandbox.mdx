@@ -1,34 +1,50 @@
 ---
 title: "Sandbox: Try the Knock2 API With Zero Setup"
 sidebarTitle: "Sandbox"
-description: "Explore every core Knock2 API endpoint with a shared, public sandbox key and realistic dummy data — no signup, no tracking script, no real website traffic required."
+description: "Explore every core Knock2 API endpoint with a sandbox key you can get yourself in seconds and realistic dummy data — no signup, no tracking script, no real website traffic required."
 ---
 
-Want to see what the Knock2 API looks like before installing anything on a real site? The sandbox lets you call every core endpoint immediately with a single shared key. Every `GET` returns realistic, fixed dummy data; every write validates your input exactly like production but never touches a real account; and a one-shot webhook test-send lets you prove your receiving endpoint works before you register a real subscription.
+Want to see what the Knock2 API looks like before installing anything on a real site? The sandbox lets you call every core endpoint immediately with a key you can get yourself in seconds. Every `GET` returns realistic, fixed dummy data; every write validates your input exactly like production but never touches a real account; and a one-shot webhook test-send lets you prove your receiving endpoint works before you register a real subscription.
 
 <Warning>
   The sandbox is for exploration only. Data is static and shared by everyone who uses it — do not build any real integration logic against it. When you're ready to go live, follow the [Quickstart](/quickstart) to get your own API key.
 </Warning>
 
-## The sandbox key
+## Getting a sandbox key
 
-Every sandbox request uses the same shared key — there's nothing to create and nothing to keep secret.
+**Provision a temporary key (recommended)** — `POST /v1/sandbox/keys` issues a key instantly, locked to your IP address and valid for 30 minutes. No signup, no emailing support:
+
+```bash
+curl -X POST https://api.knock2.ai/v1/sandbox/keys
+```
+
+```json
+{
+  "data": {
+    "key": "kn_sandbox_temp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "expires_at": "2026-10-28T12:30:00+00:00",
+    "expires_in_seconds": 1800
+  }
+}
+```
+
+Pass the returned `key` exactly like any sandbox key, in the `Authorization` header. It only works from the IP address that requested it — calling `POST /v1/sandbox/keys` again from that same IP replaces it with a fresh 30-minute key, so just request a new one whenever yours expires.
 
 <Note>
-  The sandbox is currently in limited rollout. `kn_sandbox_example` below is illustrative, not a working key — [contact us](mailto:support@knock2.ai) for the current value while general access is being rolled out.
+  There's also a shared, static sandbox key that never expires and isn't IP-locked. It isn't published on this page — the self-serve key above covers every endpoint with no extra step, so start there; [contact us](mailto:support@knock2.ai) if you specifically need the shared key instead.
 </Note>
 
-Pass it exactly like a real key, in the `Authorization` header:
+Pass either kind of key exactly the same way, in the `Authorization` header:
 
 ```bash
 curl https://api.knock2.ai/v1/sandbox/accounts \
   -H "Authorization: Bearer kn_sandbox_example"
 ```
 
-Every sandbox endpoint lives under the `/v1/sandbox/` prefix instead of `/v1/` — nothing else about the request shape changes. A request to `/v1/sandbox/*` with a real `kn_live_...` key (or vice versa) is rejected with `401 Unauthorized`; the two are never interchangeable.
+Every sandbox endpoint lives under the `/v1/sandbox/` prefix instead of `/v1/` — nothing else about the request shape changes. A request to `/v1/sandbox/*` with a real `kn_live_...` key (or vice versa) is rejected with `401 Unauthorized`; the two are never interchangeable. A missing, invalid, or expired sandbox key also gets a `401` that points you back to `POST /v1/sandbox/keys`.
 
 <Note>
-  Because the key is public, the sandbox has its own coarse, shared rate limit — separate from the per-key limits described in [Authentication](/authentication). If you're testing high request volume, do it against a real key instead.
+  Because sandbox keys are easy to obtain, the sandbox has its own coarse, shared rate limit — separate from the per-key limits described in [Authentication](/authentication) — plus its own 5 requests/minute limit on `POST /v1/sandbox/keys` itself, so provisioning can't be used as a workaround for that limit. If you're testing high request volume, do it against a real key instead.
 </Note>
 
 ## What's covered
