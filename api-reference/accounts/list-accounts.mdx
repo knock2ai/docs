@@ -122,6 +122,10 @@ Returns `200 OK` with a paginated list of account objects.
         }
       ],
       "total_browsing_time_seconds": 342,
+      "external_ids_by_visitor": [
+        { "external_id": "their-session-id", "user_id": "u_42" },
+        { "external_id": "their-other-session-id" }
+      ],
       "is_from_enrichment": false,
       "created_at": "2024-05-15T09:00:00Z"
     }
@@ -319,6 +323,10 @@ Returns `200 OK` with a paginated list of account objects.
 
     <ResponseField name="is_from_enrichment" type="boolean">
       `true` if this account record was created via enrichment rather than a live website visit.
+    </ResponseField>
+
+    <ResponseField name="external_ids_by_visitor" type="array">
+      A company has many visitors, so unlike a contact there's no single `external_id`. This is each recent visitor's IDs from `window.knock2.setExternalId(...)`, newest visit first and capped, for visitors who called it at all. An empty array if none have. See [Pass Your Own IDs](/guides/external-ids).
     </ResponseField>
 
     <ResponseField name="created_at" type="string">

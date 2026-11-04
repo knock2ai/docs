@@ -87,6 +87,12 @@ Here is a real sample payload for each event type:
   "domain": "acme-robotics.com",
   "estimated_annual_revenue": "$10M-$50M",
   "estimated_employee_count": "51-200",
+  "external_id": "chat_8f2a1c",
+  "external_ids": {
+    "external_id": "chat_8f2a1c",
+    "user_id": "u_9021"
+  },
+  "external_ids_by_visitor": null,
   "hubspot_company_id": "1000000001",
   "id": "00000000-0000-4000-8000-000000000001",
   "industry": "Robotics & Automation",
@@ -178,6 +184,11 @@ Here is a real sample payload for each event type:
   "departments": ["sales"],
   "document_referrer": "https://www.google.com/",
   "email": "jane.doe@acme-robotics.com",
+  "external_id": "chat_8f2a1c",
+  "external_ids": {
+    "external_id": "chat_8f2a1c",
+    "user_id": "u_9021"
+  },
   "first_name": "Jane",
   "headline": null,
   "hubspot_company_id": "1000000001",
@@ -298,6 +309,8 @@ Here is a real sample payload for each event type:
 <Note>
   `workflow.triggered` is a deprecated alias of `play.triggered` — Knock2 dispatches it with the exact same payload shown in the `play.triggered` tab above (`play_id`/`play_name` are simply aliased as `workflow_id`/`workflow_name`). Existing subscriptions keep receiving it; don't subscribe new integrations to it.
 </Note>
+
+`external_id` and `external_ids` carry back whatever your page passed to `window.knock2.setExternalId(...)` — see [Pass Your Own IDs](/guides/external-ids). On `contact.identified`, they're the one answer for that contact. On `account.identified`, a company has many visitors, so they name only the one browser whose visit triggered that specific delivery; `external_ids_by_visitor` (the shape `GET /v1/accounts` returns instead, for a read with no specific visit in hand) is always `null` here.
 
 These samples come from the same fixture data used by the [sandbox environment](/sandbox) and are kept in sync with real dispatch payloads by an automated check — if a field looks off, it's out of date rather than approximate, so let us know.
 

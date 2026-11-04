@@ -1,0 +1,99 @@
+---
+title: "Pass Your Own IDs to Knock2 Identifications"
+sidebarTitle: "External IDs"
+description: "Hand Knock2 your own ID for a visit with window.knock2.setExternalId() and get it back on every identification, so you can join Knock2's answer to your own record."
+---
+
+If your own system already has an ID for a visit or a visitor — a chat session ID, a user ID — you can hand it to Knock2 with `window.knock2.setExternalId(...)`. When Knock2 later identifies that visitor as a contact or a company, the identification carries your ID back, so you can join it straight onto your own record without a separate lookup step.
+
+This is the pattern behind connecting an AI chat agent to Knock2: your agent is talking to an anonymous visitor, and when Knock2 names that visitor a minute or a day later, your own system attaches the name to the exact chat it came from.
+
+## Set an ID
+
+Once the [tracking script](/guides/tracking-script) has loaded, call `setExternalId` with a single value:
+
+```js
+window.knock2.setExternalId("their-session-id");
+```
+
+Or pass an object to set several, named however your own system names them:
+
+```js
+window.knock2.setExternalId({ session_id: "abc", user_id: "u_42" });
+```
+
+You can call `setExternalId` at any time, including well after page load — it's tied to the browser, not to a single page view, so it survives page loads and the tracking script's own session rotating.
+
+<Note>
+  Calling `setExternalId("...")` a second time with a new value doesn't erase the first — every value is kept under its key, and identifications carry back the *newest* value for each one. If you only ever send a per-visit ID, that's what you'll always get: the latest visit, not a durable per-user answer. For a value you want to persist across visits, send a stable per-user ID rather than only a per-visit one.
+</Note>
+
+### Calling before the script has loaded
+
+If your page might call `setExternalId` before the tracking script has finished loading, paste this snippet once, above those calls — it queues every call until the script is ready:
+
+```html
+<script>
+window.knock2=window.knock2||{};window.knock2.q=window.knock2.q||[];["identify","setExternalId","ready"].forEach(function(m){window.knock2[m]=window.knock2[m]||function(){window.knock2.q.push([m,[].slice.call(arguments)])}});
+</script>
+```
+
+### Other methods
+
+```js
+// Knock2's own visitor ID for this browser, for customers who would
+// rather store ours. Returns null until the script is running.
+window.knock2.getVisitorId();
+
+// Run code only once the script is live on this page.
+window.knock2.ready(function (knock2) {
+  console.log(knock2.getVisitorId());
+});
+```
+
+## Limits
+
+- Up to 10 keys per call.
+- Keys can be up to 64 characters of letters, digits, and `_ . : -`.
+- Values can be up to 256 characters.
+
+Anything outside these limits is dropped on its own — the rest of the call still saves.
+
+## Privacy
+
+Nothing is sent for a visitor who has Global Privacy Control enabled or your site's own opt-out cookie set. The call is a silent no-op for that visitor.
+
+## What comes back
+
+Every identification carries two fields back:
+
+```json
+{
+  "external_id": "their-session-id",
+  "external_ids": { "external_id": "their-session-id", "user_id": "u_42" }
+}
+```
+
+`external_id` is the plain `setExternalId("...")` value. `external_ids` holds every key you set, with the newest value for each. A visitor who never called `setExternalId` has `external_id: null` and `external_ids: {}`.
+
+<Warning>
+  IDs only appear once a visitor is actually identified. A low-traffic test page where nobody has been matched to a contact or company yet will show nothing, even if `setExternalId` ran successfully.
+</Warning>
+
+### On a person (contact)
+
+A contact has one answer, since a contact is one person on one set of browsers. It's present on:
+
+- The `contact.identified` [webhook](/guides/webhooks)
+- Every Play and Workflow webhook destination
+- `GET /v1/contacts` and `GET /v1/contacts/{id}`
+
+### On a company (account)
+
+A company has many visitors, so there's no single "the account's external ID" the way a contact has one. The shape depends on what you're reading:
+
+- **`account.identified` webhook**: carries `external_id` / `external_ids` for the one browser whose visit triggered that specific delivery — the same shape as a contact, just naming only that one visitor. A delivery triggered by a different visitor on the same company carries that visitor's IDs instead.
+- **`GET /v1/accounts` and `GET /v1/accounts/{id}`**: there's no specific visit behind a read like this, so instead you get `external_ids_by_visitor` — a list of recent visitors' IDs, newest visit first, capped. A company with no visitor who has called `setExternalId` returns an empty array.
+- **Account Plays and Workflow webhook destinations**: same list shape as the accounts API, for the same reason — a Play run isn't tied to one specific visit either.
+
+See the [webhooks guide](/guides/webhooks) for full example payloads of both events, and the [Accounts API reference](/api-reference/accounts/list-accounts) for the list shape.

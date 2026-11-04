@@ -120,6 +120,16 @@ Call this as soon as you know who the visitor is — typically right after a suc
 
 A confirmed identity recorded this way is kept separate from Knock2's inferred contact and company records. It does not automatically change or correct an existing contact or company in your workspace.
 
+## Pass Your Own IDs
+
+`window.knock2` exposes a few other methods alongside `identify()`:
+
+- **`window.knock2.setExternalId(...)`** — hand Knock2 your own ID for a visit (a chat session ID, a user ID), and get it back on every identification of that visitor so you can join it to your own record.
+- **`window.knock2.getVisitorId()`** — read Knock2's own visitor ID for this browser, for customers who would rather store ours.
+- **`window.knock2.ready(fn)`** — run code only once the script is live on the page.
+
+See [Pass Your Own IDs](/guides/external-ids) for the full reference, including the queue snippet for calling `setExternalId` before the tracking script has loaded.
+
 ## Framework-Specific Tips
 
 <AccordionGroup>
