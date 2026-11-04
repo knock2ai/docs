@@ -141,6 +141,8 @@ Returns `200 OK` with a `data` object containing the full contact record.
     "icp_scoring_icp_title": "Enterprise Engineering Leader",
     "icp_scoring_score": 87,
     "icp_scoring_reason": "Matches target industry, seniority, and department.",
+    "external_id": "their-session-id",
+    "external_ids": { "external_id": "their-session-id", "user_id": "u_42" },
     "created_at": "2024-05-20T11:00:00Z"
   }
 }
@@ -446,6 +448,14 @@ Returns `200 OK` with a `data` object containing the full contact record.
 
     <ResponseField name="icp_scoring_reason" type="string">
       A human-readable explanation of why this contact received their ICP score.
+    </ResponseField>
+
+    <ResponseField name="external_id" type="string | null">
+      The ID your page passed to `window.knock2.setExternalId("...")` on this contact's browser. `null` if this contact's browser never called it. See [Pass Your Own IDs](/guides/external-ids).
+    </ResponseField>
+
+    <ResponseField name="external_ids" type="object">
+      Every ID your page passed to `window.knock2.setExternalId({...})` on this contact's browser, by the names you gave them (newest value per name). A plain `setExternalId("...")` call is under the key `external_id`. An empty object if this contact's browser never called it.
     </ResponseField>
 
     <ResponseField name="created_at" type="string">
