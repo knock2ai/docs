@@ -35,7 +35,7 @@
             "group": "Guides",
             "pages": [
               "guides/tracking-script",
-              "guides/external-ids",
+              "guides/website-events",
               "guides/webhooks",
               "guides/enrichment",
               "guides/filtering",

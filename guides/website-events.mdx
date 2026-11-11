@@ -1,0 +1,215 @@
+---
+title: "Website Events: React When Knock2 Identifies a Visitor"
+sidebarTitle: "Website events"
+description: "Get a browser event on your own site when Knock2 identifies a visitor's company, with their job function, seniority and ICP score, to send ad conversions from LinkedIn, Meta, Google Ads or Google Tag Manager."
+---
+
+Website events tell your own website, in the visitor's browser, when Knock2 has identified which company they're from. Your ad pixels and tag manager can then act on it while the visitor is still on the page: count a conversion for visits from your ideal customers, build audiences, or personalize the page.
+
+A common use is giving ad platforms a conversion they can optimize toward. B2B form fills rarely reach the volume ad algorithms need, but visits from companies that fit your ICP do.
+
+<Note>
+  Website events never say who the visitor is. They carry the company, the visitor's job function and seniority when Knock2 knows them, and the company's ICP score. Never a name, email address, phone number or LinkedIn profile.
+</Note>
+
+## Turn on website events
+
+<Steps>
+  <Step title="Install the tracking script">
+    Website events come from the Knock2 tracking script, so it needs to be on every page you want events from. See [Install the tracking script](/guides/tracking-script).
+  </Step>
+  <Step title="Switch them on">
+    In the Knock2 dashboard, go to **Settings > Script > Website events** and turn on **Send website events**. Only workspace admins can change this.
+  </Step>
+  <Step title="Choose how often">
+    **Every page view** (recommended) sends an event on each page, and each event says whether it's the first in the visit. **Once per visit** sends a single event per visit.
+  </Step>
+  <Step title="Set your fit score">
+    **Good fit above score** decides when an event marks the company as a good fit (`icp.is_fit`). The default is 50. The score itself is always included, so you can also apply your own rule.
+  </Step>
+</Steps>
+
+Changes take effect as visitors load new pages, usually within a few minutes. Nothing changes on your site while website events are off.
+
+## Listen for the event
+
+The tracking script sends the same event three ways. Use whichever fits your setup.
+
+<CodeGroup>
+
+```html Browser event
+<script>
+  window.addEventListener("knock2:visitor_identified", function (e) {
+    var visit = e.detail;
+    console.log(visit.company.name, visit.icp.score);
+  });
+</script>
+```
+
+```js Google Tag Manager
+// The script pushes this to window.dataLayer:
+{
+  event: "knock2_visitor_identified",
+  knock2: { /* the event, see below */ }
+}
+```
+
+```js Callback
+// Only available once the Knock2 script has loaded.
+window.knock2.onVisitorIdentified(function (visit) {
+  console.log(visit.company.name, visit.icp.score);
+});
+```
+
+</CodeGroup>
+
+If your code might run before the Knock2 script loads, use the browser event or Google Tag Manager. The callback is called on every event, and right away with the latest event if one has already been sent.
+
+## What's in the event
+
+```json
+{
+  "session_id": "V1StGXR8_Z5jdHi6B-myT",
+  "first_in_session": true,
+  "page": "/pricing",
+  "company": {
+    "name": "Acme",
+    "domain": "acme.com",
+    "industry": "Software",
+    "employees_min": 51,
+    "employees_max": 200,
+    "country": "US",
+    "linkedin_url": "https://www.linkedin.com/company/acme"
+  },
+  "persona": {
+    "label": "Information Technology Manager",
+    "job_function": "information_technology",
+    "seniority": "manager"
+  },
+  "icp": { "score": 72, "is_fit": true, "fit_threshold": 50 },
+  "is_existing_customer": false
+}
+```
+
+<ResponseField name="session_id" type="string">
+  The visit. The same on every page of one visit, so you can use it to count once per visit or as the event ID when you also send the conversion from your server.
+</ResponseField>
+
+<ResponseField name="first_in_session" type="boolean">
+  True for the first scored event in this visit. Count events where this is true to count once per visit. An event sent before the company was scored doesn't use it up.
+</ResponseField>
+
+<ResponseField name="page" type="string">
+  The path of the page this event is for.
+</ResponseField>
+
+<ResponseField name="company" type="object">
+  The company the visit came from: name, domain, industry, employee range, country and LinkedIn company page. Fields Knock2 doesn't know are `null`.
+</ResponseField>
+
+<ResponseField name="persona" type="object | null">
+  Who in the company the visitor probably is, inferred for this visit. `null` when Knock2 only knows the company.
+
+  <Expandable title="properties">
+    <ResponseField name="label" type="string | null">
+      Job function and seniority as one phrase, the way the Knock2 dashboard shows it: "Information Technology Manager", "Engineering", "Executive".
+    </ResponseField>
+    <ResponseField name="job_function" type="string | null">
+      For example `engineering`, `sales`, `marketing`, `operations`, `information_technology`, `product`, `finance`, `human_resources` or `leadership`.
+    </ResponseField>
+    <ResponseField name="seniority" type="string | null">
+      For example `executive`, `director` or `manager`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="icp" type="object">
+  How well the company fits your ideal customer profile.
+
+  <Expandable title="properties">
+    <ResponseField name="score" type="integer | null">
+      The company's ICP score, 0 to 100, from your lead scoring setup in Knock2. `null` if the company hasn't been scored yet.
+    </ResponseField>
+    <ResponseField name="is_fit" type="boolean | null">
+      True when `score` is above `fit_threshold`. `null` when there's no score.
+    </ResponseField>
+    <ResponseField name="fit_threshold" type="integer">
+      Your **Good fit above score** setting. 50 unless you changed it.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="is_existing_customer" type="boolean">
+  True when the company is on your existing customers list in Knock2, so current customers browsing your site can be left out of acquisition metrics.
+</ResponseField>
+
+### Timing
+
+Knock2 identifies and scores the company after the visitor's first page loads. Each page waits up to about 30 seconds for a score. If none arrives, the event is sent with `score: null` and the next page in the visit tries again. On single-page apps, a new event is sent when the visitor moves to a new page.
+
+No event is sent for a visitor whose company Knock2 couldn't identify, for a visitor who has opted out (including Global Privacy Control), or on pages you've excluded in **Settings > Script > Excluded pages**.
+
+## Examples
+
+### LinkedIn Ads conversion for ICP visits
+
+```html
+<script>
+  window.addEventListener("knock2:visitor_identified", function (e) {
+    var visit = e.detail;
+    if (visit.first_in_session && visit.icp.is_fit && !visit.is_existing_customer) {
+      window.lintrk && window.lintrk("track", { conversion_id: 1234567 });
+    }
+  });
+</script>
+```
+
+### Meta Pixel, deduplicated with the Conversions API
+
+If you also send the same conversion from your server through Meta's Conversions API, give both the same event ID so Meta counts it once.
+
+```html
+<script>
+  window.addEventListener("knock2:visitor_identified", function (e) {
+    var visit = e.detail;
+    if (visit.first_in_session && visit.icp.is_fit) {
+      window.fbq && window.fbq("trackCustom", "ICPVisit",
+        { company_size: visit.company.employees_max, job_function: visit.persona && visit.persona.job_function },
+        { eventID: "knock2-" + visit.session_id }
+      );
+    }
+  });
+</script>
+```
+
+Use the same value as the `event_id` in your server-side event.
+
+### Filter on persona
+
+```js
+var p = visit.persona;
+var rightPersona = p && (p.job_function === "engineering" || p.seniority === "executive");
+if (visit.icp.is_fit && rightPersona) {
+  // send the conversion
+}
+```
+
+### Google Tag Manager
+
+<Steps>
+  <Step title="Create the variables">
+    Add Data Layer Variables for `knock2.icp.is_fit`, `knock2.first_in_session`, `knock2.is_existing_customer` and, if you filter on persona, `knock2.persona.job_function`.
+  </Step>
+  <Step title="Create the trigger">
+    Add a **Custom Event** trigger for the event name `knock2_visitor_identified`, firing on events where `knock2.icp.is_fit` equals `true` (and `knock2.first_in_session` equals `true` to count once per visit).
+  </Step>
+  <Step title="Attach your conversion tag">
+    Use the trigger on your LinkedIn Insight Tag, Meta Pixel or Google Ads conversion tag.
+  </Step>
+</Steps>
+
+## Privacy
+
+Any script running on your site can read website events, which is why they're off until an admin switches them on and why they never include who the visitor is. Job function and seniority describe a role, not a person.
+
+Visitors who opt out of tracking, or whose browser sends a Global Privacy Control signal, never get events.

@@ -25,7 +25,7 @@ window.knock2.setExternalId({ session_id: "abc", user_id: "u_42" });
 You can call `setExternalId` at any time, including well after page load — it's tied to the browser, not to a single page view, so it survives page loads and the tracking script's own session rotating.
 
 <Note>
-  Calling `setExternalId("...")` a second time with a new value doesn't erase the first — every value is kept under its key, and identifications carry back the *newest* value for each one. If you only ever send a per-visit ID, that's what you'll always get: the latest visit, not a durable per-user answer. For a value you want to persist across visits, send a stable per-user ID rather than only a per-visit one.
+  Calling `setExternalId("...")` a second time with a new value doesn't erase the first — every value is kept under its key, and identifications carry back the _newest_ value for each one. If you only ever send a per-visit ID, that's what you'll always get: the latest visit, not a durable per-user answer. For a value you want to persist across visits, send a stable per-user ID rather than only a per-visit one.
 </Note>
 
 ### Calling before the script has loaded
@@ -82,7 +82,7 @@ Every identification carries two fields back:
 
 ### On a person (contact)
 
-A contact has one answer, since a contact is one person on one set of browsers. It's present on:
+A contact has one answer, since a contact is one person on one set of browsers. If more than one person is identified on the same browser, only the strongest match carries your ID. It's present on:
 
 - The `contact.identified` [webhook](/guides/webhooks)
 - Every Play and Workflow webhook destination
