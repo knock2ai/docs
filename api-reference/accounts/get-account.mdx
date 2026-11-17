@@ -119,6 +119,8 @@ Returns `200 OK` with a `data` object containing the full account record.
       }
     ],
     "total_browsing_time_seconds": 1842,
+    "icp_scoring_score": 76,
+    "icp_scoring_reason": "Matches target revenue band and recent funding.",
     "utms": {},
     "document_referrer": "https://www.google.com",
     "utm_source": "google",
@@ -276,6 +278,22 @@ Returns `200 OK` with a `data` object containing the full account record.
 
     <ResponseField name="salesforce_account_id" type="string">
       The corresponding Salesforce Account record ID, if synced.
+    </ResponseField>
+
+    <ResponseField name="icp_scoring_icp_id" type="string">
+      The ID of the ICP definition used to score this account.
+    </ResponseField>
+
+    <ResponseField name="icp_scoring_icp_title" type="string">
+      The display name of the ICP definition used to score this account.
+    </ResponseField>
+
+    <ResponseField name="icp_scoring_score" type="integer">
+      A numeric ICP fit score between `0` and `100`. Higher scores indicate a closer match to your Ideal Customer Profile. `null` until the account has been scored.
+    </ResponseField>
+
+    <ResponseField name="icp_scoring_reason" type="string">
+      A human-readable explanation of why this account received their ICP score.
     </ResponseField>
 
     <ResponseField name="latest_visit_datetime" type="string">

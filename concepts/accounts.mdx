@@ -82,6 +82,26 @@ Account records grow richer over time. As the company continues to visit, Knock2
   The amount raised in the most recent funding round (e.g. `"$20,000,000"`).
 </ResponseField>
 
+### ICP scoring
+
+<ResponseField name="icp_scoring_score" type="number">
+  A 0–100 score representing how well this account fits your ideal customer profile. Higher is better. Null until the account has been scored.
+</ResponseField>
+
+<ResponseField name="icp_scoring_icp_id" type="string">
+  The Knock2 ID of the ideal customer profile this account was scored against.
+</ResponseField>
+
+<ResponseField name="icp_scoring_icp_title" type="string">
+  The ICP persona label assigned to this account (e.g. `"Enterprise Buyer"`).
+</ResponseField>
+
+<ResponseField name="icp_scoring_reason" type="string">
+  A plain-language explanation of why this account received their score (e.g. `"500-1000 employee SaaS company matching target industry and revenue band."`).
+</ResponseField>
+
+### CRM data
+
 <ResponseField name="crm_deal_source" type="string">
   The deal source as synced from your connected CRM. Only populated when a CRM integration is active.
 </ResponseField>
@@ -129,6 +149,14 @@ Account records grow richer over time. As the company continues to visit, Knock2
 <ResponseField name="created_at" type="string">
   ISO 8601 timestamp of when Knock2 first identified this account.
 </ResponseField>
+
+## ICP scoring
+
+Every account carries an ICP score that reflects firmographic fit. The `icp_scoring_score` field gives you a numeric value from **0 to 100**, while `icp_scoring_reason` provides a plain-language explanation so your team understands the "why" behind the score — not just the number. `icp_scoring_icp_id` and `icp_scoring_icp_title` tell you which of your ideal customer profiles the account was scored against.
+
+<Info>
+  Scoring runs shortly after an account is first identified. A brand-new account may briefly carry a null score until the scoring job catches up — this is normal and resolves on its own, typically within minutes.
+</Info>
 
 ## Pagination
 
