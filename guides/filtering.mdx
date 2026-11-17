@@ -146,6 +146,19 @@ Each filter object must include a `keyType` that tells Knock2 how to interpret t
       "value": 80
     }
     ```
+
+    **Example** — accounts identified with at least `strong` confidence:
+
+    ```json
+    {
+      "key": "identification_confidence_rank",
+      "keyType": "number",
+      "condition": "gte",
+      "value": 2
+    }
+    ```
+
+    An account with no confidence value (not identified from a network address) doesn't match a numeric filter, so this example returns only accounts known to be `strong` or `very_strong`.
   </Accordion>
 
   <Accordion title="existence — check whether a field is present">

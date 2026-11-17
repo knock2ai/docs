@@ -27,6 +27,7 @@ This page is the exhaustive reference for [filtering](/guides/filtering) account
 | `pages_visited` | `string_arr` | Array of page URLs visited |
 | `last_page` | `string_arr` | Most recently visited page URL |
 | `browsing_time` | `number` | Total browsing time in seconds |
+| `identification_confidence_rank` | `number` | Identification confidence, as a number (1 = standard, 2 = strong, 3 = very_strong). Null for accounts not identified from a network address — null never matches a numeric filter. |
 | `lead_score` | `number_with_id` | Lead score — requires a scoring model ID |
 | `owner` | `string_with_id` | Assigned owner — requires an owner ID |
 | `utm_source` | `string_arr` | UTM source values |
