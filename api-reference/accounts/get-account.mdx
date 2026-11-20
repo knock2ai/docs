@@ -123,6 +123,7 @@ Returns `200 OK` with a `data` object containing the full account record.
     "icp_scoring_reason": "Matches target revenue band and recent funding.",
     "identification_confidence": "strong",
     "identification_confidence_rank": 2,
+    "identification_confidence_rank_reason": ["moderate_address_match"],
     "utms": {},
     "document_referrer": "https://www.google.com",
     "utm_source": "google",
@@ -304,6 +305,32 @@ Returns `200 OK` with a `data` object containing the full account record.
 
     <ResponseField name="identification_confidence_rank" type="integer | null">
       `identification_confidence` as a number for filtering and sorting: 1 = standard, 2 = strong, 3 = very_strong. Null whenever `identification_confidence` is null.
+    </ResponseField>
+
+    <ResponseField name="identification_confidence_rank_reason" type="array<string> | null">
+      Why the account has its `identification_confidence_rank`, as a list of codes. Can hold more than one. Null whenever `identification_confidence` is null.
+
+      Codes that describe the match, or raise confidence:
+
+      | Code | Meaning |
+      | --- | --- |
+      | `network_owned_by_company` | The visit came from a network registered to the company itself. Our strongest signal. |
+      | `strong_address_match` | The address is firmly tied to the company. |
+      | `moderate_address_match` | The address is moderately tied to the company. |
+      | `weak_address_match` | No strong evidence either way. |
+
+      Codes that limit confidence:
+
+      | Code | Meaning |
+      | --- | --- |
+      | `mobile_network` | A phone carrier network. |
+      | `satellite` | A satellite connection. |
+      | `public_venue` | A hotel, airport, cafe or similar. |
+      | `proxy` | The visitor is behind a proxy or anonymizer. |
+      | `shared_address` | An address that also carries unrelated traffic. |
+      | `school` | The address resolved to a school or university. |
+
+      This list is open-ended: new codes may be added over time. Treat a code you don't recognize as informational rather than an error.
     </ResponseField>
 
     <ResponseField name="latest_visit_datetime" type="string">
