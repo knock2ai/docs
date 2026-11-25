@@ -204,6 +204,9 @@ Here is a real sample payload for each event type:
   "icp_scoring_reason": "Senior sales leader at a target-tagged account with high engagement.",
   "icp_scoring_score": 88,
   "id": "00000000-0000-4000-8000-000000000011",
+  "identification_confidence": "very_strong",
+  "identification_confidence_rank": 3,
+  "identification_confidence_rank_reason": ["company_and_contact_agree", "high_match_quality", "work_identity"],
   "is_business_email_valid": true,
   "is_qualified": true,
   "last_email_validation_id": null,
@@ -318,6 +321,10 @@ Here is a real sample payload for each event type:
 </Note>
 
 `external_id` and `external_ids` carry back whatever your page passed to `window.knock2.setExternalId(...)` — see [Pass Your Own IDs](/guides/external-ids). On `contact.identified`, they're the one answer for that contact. On `account.identified`, a company has many visitors, so they name only the one browser whose visit triggered that specific delivery; `external_ids_by_visitor` (the shape `GET /v1/accounts` returns instead, for a read with no specific visit in hand) is always `null` here.
+
+### Identification Confidence
+
+`account.identified` carries `identification_confidence`, `identification_confidence_rank`, and `identification_confidence_rank_reason` for the account. `contact.identified` carries the same three fields for the contact. A webhook delivery carries the tier as of the moment it was sent — the API always gives the current answer, which can be higher later. See the reason code tables on [Get Account](/api-reference/accounts/get-account) and [Get Contact](/api-reference/contacts/get-contact).
 
 These samples come from the same fixture data used by the [sandbox environment](/sandbox) and are kept in sync with real dispatch payloads by an automated check — if a field looks off, it's out of date rather than approximate, so let us know.
 
