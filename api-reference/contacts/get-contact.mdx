@@ -141,6 +141,9 @@ Returns `200 OK` with a `data` object containing the full contact record.
     "icp_scoring_icp_title": "Enterprise Engineering Leader",
     "icp_scoring_score": 87,
     "icp_scoring_reason": "Matches target industry, seniority, and department.",
+    "identification_confidence": "standard",
+    "identification_confidence_rank": 1,
+    "identification_confidence_rank_reason": ["single_source"],
     "external_id": "their-session-id",
     "external_ids": { "external_id": "their-session-id", "user_id": "u_42" },
     "created_at": "2024-05-20T11:00:00Z"
@@ -448,6 +451,38 @@ Returns `200 OK` with a `data` object containing the full contact record.
 
     <ResponseField name="icp_scoring_reason" type="string">
       A human-readable explanation of why this contact received their ICP score.
+    </ResponseField>
+
+    <ResponseField name="identification_confidence" type="string | null">
+      How much evidence says this person was the visitor: `standard`, `strong` or `very_strong`. `standard` is the common case. No tier is a verified match. Null when the contact was not identified from a website visit (for example it was prospected, imported, or added by hand).
+    </ResponseField>
+
+    <ResponseField name="identification_confidence_rank" type="integer | null">
+      `identification_confidence` as a number for filtering and sorting: 1 = standard, 2 = strong, 3 = very_strong. Null whenever `identification_confidence` is null.
+    </ResponseField>
+
+    <ResponseField name="identification_confidence_rank_reason" type="array<string> | null">
+      Why the contact has its `identification_confidence_rank`, as a list of codes. Can hold more than one. Null whenever `identification_confidence` is null.
+
+      Codes that describe the match, or raise confidence:
+
+      | Code | Meaning |
+      | --- | --- |
+      | `company_and_contact_agree` | The person works at the company the visit was identified as. |
+      | `multiple_sources_agree` | More than one independent source named this person. |
+      | `high_match_quality` | A kind of match with a strong accuracy record. |
+      | `work_identity` | Identified by a work email. |
+      | `single_source` | One source named this person. |
+
+      Codes that limit confidence:
+
+      | Code | Meaning |
+      | --- | --- |
+      | `personal_email` | Only a personal email was found. |
+
+      This list is open-ended: new codes may be added over time. Treat a code you don't recognize as informational rather than an error.
+
+      A `contact.identified` webhook delivery carries the tier as of the moment it was sent. A later `GET` on the same contact can show a higher tier, never the reverse for the same evidence.
     </ResponseField>
 
     <ResponseField name="external_id" type="string | null">
